@@ -1,4 +1,4 @@
-name = "IBPM"
+name = "ibpm"
 uuid = "8b296a2c-dff5-4358-8eda-23c6898b9911"
 authors = ["Eric Wan <ewan2@illinois.edu> and contributors"]
 version = "0.1.0"
