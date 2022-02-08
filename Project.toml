@@ -1,3 +1,8 @@
+name = "IBPM.jl"
+uuid = "8b296a2c-dff5-4358-8eda-23c6898b9911"
+authors = ["Eric Wan <ewan2@illinois.edu> and contributors"]
+version = "0.1.0"
+
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
