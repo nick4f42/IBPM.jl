@@ -1,3 +1,3 @@
-```@contents
-Pages = ["ibpm.md", "models.md"]
+```@autodocs
+Modules = [ibpm]
 ```
