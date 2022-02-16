@@ -21,10 +21,29 @@ include("plotting/plotting-include.jl")
 include("experimental/sfd.jl")
 
 """
+    IBPM_advance(Re, boundary::Tuple, body, freestream, Δx, mg, Δt, T, save_info)
+ 
 Convenience function to solve the full problem and plot final solution
-    for flow over a single cylinder
-
+   for flow over a single cylinder
+ 
 For more control, just use this as a template - see benchmarks and examples
+ 
+# Arguments
+- `Re::Any`: Reynolds Number.
+- `boundary::Tuple`: Describes the boundaries of the interesed simulation domain. Defined by a tuple of format: (left, right, bottom, top).
+- `body::Vector{NamedTuple{}}`: Defines simulated bodies. See [`make_body`](@ref).
+- `freestream`: Optional. Describes the incomming freestream. Defined by a named typle of format: (Ux=f(t), Uy=f(t), inclination=f(t))
+- `Δx`: Optional. Grid sizing. Any number type.
+- `mg`: Optional. Number of subdomains in each grid block. Default is 5.
+- `Δt`: Optional. Timestep interval. Choose Δt such that CFL<1 for stable/accurate simulation solution.
+- `T`: Optional. Total simulation time. Default is 20*dt. <<<dt is not defined anywhere???>>>
+- `save_info`: Optional. See [`init_save_data`](@ref).
+ 
+# Returns
+- `prob`: Stucture of type AbstractIBProblem. Defines what type of problem is being solved. Can be structs IBProblem, LinearizedIBProblem, SFDProblem. 
+        See [`IBProblem`](@ref).
+- `data`: Solution data to simulation at defined time intervals. See [`IBState`](@ref).
+- `runtime`: Total runtime of simulation.
 """
 function IBPM_advance(Re, boundary, body, freestream=(Ux=t->0.0,);
     Δx=missing, mg=5, Δt=missing, T=20.0*dt, save_info=missing)
@@ -74,11 +93,18 @@ function IBPM_advance(Re, boundary, body, freestream=(Ux=t->0.0,);
 end
 
 """
-compute_cfl(state, prob)
+    compute_cfl(state, prob)
 
 Compute the CFL number (uΔt/Δx) based on the fine-grid flux
 
 Note that this uses working memory that is also used in `nonlinear!`
+
+# Arguments
+- `state`: Stores values of properties of flow at single time instance. Of Struct IBState
+- `prob`: Stucture of type AbstractIBProblem. Defines what type of problem is being solved. Can be structs IBProblem, LinearizedIBProblem, SFDProblem.
+
+# Returns
+- `cfl`: The Courant-Friedrichs-Lewy (CFL) number, used to verify the CFL condition.
 """
 function compute_cfl(state, prob)
 	Δt, Δx = prob.scheme.dt, prob.model.grid.h
@@ -87,6 +113,19 @@ function compute_cfl(state, prob)
 	return maximum(qwork)*Δt/Δx
 end
 
+"""
+    run_sim!(t, state, prob)
+
+Computes the solution to the prescribed problem for a range of times. 
+
+# Arguments
+- `t`: An array of desired simulation times. 
+- `state`: Stores values of properties of flow at single time instance. Of Struct IBState
+- `prob`: Stucture of type AbstractIBProblem. Defines what type of problem is being solved. Can be structs IBProblem, LinearizedIBProblem, SFDProblem.
+
+# Returns
+- `cfl`: The Courant-Friedrichs-Lewy (CFL) number, used to verify the CFL condition.
+"""
 function run_sim!(t, state, prob;
 	display_freq=25,
 	data::Array{user_var, 1})

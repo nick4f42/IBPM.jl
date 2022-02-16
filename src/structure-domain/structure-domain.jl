@@ -1,3 +1,19 @@
+
+"""
+    make_body(bdy_in, Δx)
+
+# Arguments
+- `bdy_in::Vector{NamedTuple}`: Body parameters defined by vector consisting of a named tuple for each body: [(type=type, lengthscale=lengthscale, 
+        motion=motion, center=center), (..2nd Body..)]
+    - `type::Symbol`: Body types supported include :cylinder and :plate. 
+    - `lengthscale::Any`: Lengthscale of body.
+    - `motion::Symbol`: Motions supported include :static or a function of time.
+    - `center::Vector{Float64}`: Center of body.
+- `Δx::Any`: Grid spacing of body, equal to grid spacing of simulation domain.
+
+# Returns
+- `bodies::Vector{RigidBody}`: A vector of struct RigidBody.
+"""
 function make_body( bdy_in, Δx )
 
     #Currently has functionality for piping into the supported bodies within

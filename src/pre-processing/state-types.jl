@@ -4,6 +4,26 @@ State variables (stores everything needed for time stepping)
 """
 abstract type State end
 
+"""
+    IBState{T<:Number} <: State
+
+State variables (stores everything needed for time stepping)
+
+# Fields
+
+- `q::Array{T, 2}`:
+- `q0::Array{T, 2}`:
+- `Γ::Array{T, 2}`: Circulation
+- `ψ::Array{T, 2}`: Streamfunction
+- `nonlin::Array{Array{T, 2}, 1}`: Memory of nonlinear terms
+- `fb::Array{Array{Float64, 2}, 1}`: Surface stresses
+- `F̃b::Array{Float64, 2}`: Body forces * dt
+- `CD::Array{Float64, 1}`: Drag coefficient
+- `CL::Array{Float64, 1}`: Lift coefficient
+- `cfl::Float64`:
+- `slip::Float64`:
+- `xb::Array{Array{Float64, 2}, 1}`:
+"""
 mutable struct IBState{T<:Number} <: State
     q::Array{T, 2}
     q0::Array{T, 2}
