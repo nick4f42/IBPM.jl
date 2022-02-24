@@ -1,3 +1,16 @@
+"""
+    plot_state(prob, state, t; var=:omega, xlims=:auto, ylims=:auto, clims=:auto, clevs=30)
+
+# Arguments
+- `prob::IBProblem`: 
+- `state::IBState`:
+- `t::AbstractRange`:
+- `var::Symbol`:
+- `xlims::Symbol`:
+- `ylims::Symbol`:
+- `clims:Symcol`:
+- `clevs::Int`:
+"""
 function plot_state( prob, state, t;
     var=:omega, xlims=:auto, ylims=:auto, clims=:auto, clevs=30)
 
@@ -51,7 +64,11 @@ function plot_state( prob, state, t;
 
 end
 
-
+"""
+    plot_ω(state::IBState, grid::T; lev=1,
+        xlims=:auto, ylims=:auto, clims=:auto,
+        colorbar=:false, framestyle=:box, clevs=30) where T <:Grid
+"""
 function plot_ω(state::IBState, grid::T; lev=1,
     xlims=:auto, ylims=:auto, clims=:auto,
     colorbar=:false, framestyle=:box, clevs=30) where T <:Grid
@@ -90,7 +107,9 @@ function plot_ω(state::IBState, grid::T; lev=1,
         clims=clims, xlims=xlims, ylims=ylims, framestyle=framestyle))
 end
 
-
+"""
+    plot_bodies(xbv; plt=missing)
+"""
 function plot_bodies(xbv; plt=missing)
 
     if ismissing(plt)
@@ -117,7 +136,11 @@ function plot_bodies(xbv; plt=missing)
     end
 end
 
-
+"""
+    plot_u(state::IBState, grid::T; lev=1,
+        xlims=:auto, ylims=:auto, clims=:auto,
+        colorbar=:false, framestyle=:box, plt=missing, clevs=30) where T <:Grid
+"""
 function plot_u(state::IBState, grid::T; lev=1,
     xlims=:auto, ylims=:auto, clims=:auto,
     colorbar=:false, framestyle=:box, plt=missing, clevs=30) where T <:Grid
@@ -213,7 +236,11 @@ function plot_u(state::IBState, grid::T; lev=1,
 
 end
 
-
+"""
+    plot_ψ(state::IBState, grid::T; lev=1,
+        xlims=:auto, ylims=:auto, clims=:auto,
+        colorbar=:false, framestyle=:box, clevs=30) where T <:Grid
+"""
 function plot_ψ(state::IBState, grid::T; lev=1,
     xlims=:auto, ylims=:auto, clims=:auto,
     colorbar=:false, framestyle=:box, clevs=30) where T <:Grid
