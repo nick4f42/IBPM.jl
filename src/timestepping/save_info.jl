@@ -1,3 +1,11 @@
+"""
+	user_var{T}
+
+# Fields
+- `val::T`: Desired type data is being stored as. e.g, Vector{Float64}, Vector{Float16}...
+- `t::AbstractRange`: Range of times to save state properties. 
+- `fcn::Any`: Function used to calculate desired property from state. <<<Provide example>>>
+"""
 mutable struct user_var{T}
 	val :: T
 	t :: Union{Vector{Float64},
@@ -7,14 +15,24 @@ mutable struct user_var{T}
 	fcn :: Any
 end
 
+"""
+	init_save_data(t, save_info, state)
 
+Initialize a data structure that will store the desired user data as a named
+Tuple, with names prescribed by user and vectors/arrays deduced by user info
+
+# Arguments
+- `t::AbstractRange`: Iterator describing time steps wished to be saved.
+- `save_info`: Named tuple of format: (save``\\_``fcns=[ (t,state)->state.CL; (t,state)->state  ], save``\\_``types = [ Vector{Float64}; Any ], 
+        save``\\_``times = svti = [ 0.0, T/30.0 ] ).
+- `state::IBState`: See [`IBState`](@ref).
+
+# Returns
+- `data::Vector{user_var}`: Initializes data for each desired recorded flow state property. See [`user_var`](@ref).
+"""
 function init_save_data( t, save_info, state )
 
-	"""
-	Initialize a data structure that will store the desired user data as a named
-	Tuple, with names prescribed by user and vectors/arrays deduced by user info
-	"""
-
+	
 	#Initial save variables as data structure
 
 	#if data structure unspecified, the full state data struct will be saved

@@ -2,7 +2,7 @@ using LinearAlgebra: norm  # FOR DEBUGGING
 
 
 """
-advance!(y::IBState, x::IBState, prob::AbstractIBProblem, t::Float64)
+    advance!(y::IBState, x::IBState, prob::AbstractIBProblem, t::Float64)
 
 Advance state x forward in time and save in y
 """
@@ -15,7 +15,7 @@ function advance!(y::IBState,
 end
 
 """
-advance(x::IBState, prob::AbstractIBProblem, t::Float64)
+    advance(x::IBState, prob::AbstractIBProblem, t::Float64)
 
 Advance state x forward in time (not mutating)
 """
@@ -30,7 +30,7 @@ end
 """
     advance!(state::IBState, prob::AbstractIBProblem, t::Float64)
 
-    Advance state forward in time.
+Advance state forward in time.
 """
 function advance!(state::IBState,
                   prob::T where T<:AbstractIBProblem,

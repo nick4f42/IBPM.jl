@@ -1,3 +1,21 @@
+"""
+    read_user_vars(Δt, Δx, freestream, Re, T)
+
+Uses user-inputted parameters to potentially set default values depending on what the user does not pass.
+
+# Arguments
+- `Δt`: Optional. Time interval
+- `Δx`: Optional. Grid spacing
+- `freestream::NamedTuple`: Freestream velocity of format named tuple (Ux=f(t), *Optional* Uy=f(t), *Optional* inclination=inclination)
+- `Re`: Reynolds Number.
+- `T`: Optional. Total simulation time.
+
+# Returns
+- `Δt`: Time interval
+- `Δx`: Grid spacing
+- `freestream::NamedTuple`: Freestream velocity of format named tuple (Ux=f(t), Uy=f(t), inclination=inclination)
+- `T`: Total simulation time.
+"""
 function read_user_vars(Δt::Union{Missing,Float64},
     Δx::Union{Missing,Float64},
     freestream::NamedTuple,
