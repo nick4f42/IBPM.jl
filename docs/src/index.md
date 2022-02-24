@@ -18,9 +18,4 @@ Once a Problem and State are defined, the basic time-stepping is to just call `a
 ### Current Status (4/22/21)
 Currently only rigid bodies have been implemented, although a single moving body can be simulated by moving the grid (a "body-fixed" reference frame, although the equations are in the inertial lab frame).  The reference cases (see the benchmarks folder) match the Fortran implementation to within $10^{-6}$ relative error, but with an average of about 40% speedup (and slightly more compared to the C++ code).
 
-<<<<<<< HEAD
 The next plans include arbitrary motion (with a fixed grid), parallelization, and adding an FSI solver for flexible bodies.
->>>>>>> Stashed changes
-=======
-The next plans include arbitrary motion (with a fixed grid), parallelization, and adding an FSI solver for flexible bodies.
->>>>>>> main
