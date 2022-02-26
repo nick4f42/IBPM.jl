@@ -33,8 +33,8 @@ mutable struct IBMatrices
     function IBMatrices(grid::T, bodies::Array{V, 1}) where T <: Grid where V <: Body
         mats = new()
         Γwork = zeros(grid.nx-1, grid.ny-1)
-        mats.C = LinearMap( (q, ψ) -> ibpm.curl!(q, ψ, grid),       # Forward
-                            (Γ, q) -> ibpm.rot!(Γ, q, grid, Γwork), # Transpose
+        mats.C = LinearMap( (q, ψ) -> IBPM.curl!(q, ψ, grid),       # Forward
+                            (Γ, q) -> IBPM.rot!(Γ, q, grid, Γwork), # Transpose
                             grid.nq, grid.nΓ; ismutating=true)
         #mats.Lap = mats.C'*mats.C/Re    # Laplacian
         mats.Λ = lap_eigs(grid)
@@ -46,7 +46,7 @@ mutable struct IBMatrices
         mats.Δinv = get_lap_inv(grid, mats.Λ, mats.dst_plan)
 
         # Interpolation/regularization matrix
-        mats.E = ibpm.setup_reg(grid, bodies)   # interface-coupling/interface-oupling.jl
+        mats.E = IBPM.setup_reg(grid, bodies)   # interface-coupling/interface-oupling.jl
         return mats
     end
 end

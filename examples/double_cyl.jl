@@ -1,5 +1,5 @@
-include("../src/ibpm.jl")
-using .ibpm
+include("../src/IBPM.jl")
+using .IBPM
 
 
 using FileIO #For saving data as a jld2 file
@@ -103,13 +103,13 @@ using FileIO #For saving data as a jld2 file
     #that. First off, we can plot a snapshot of the flowfield in terms of either
     #vorticity (var=:omega, default), x and y velocity (var=:vel), or the
     #streamfunction (var=:psi). Let's do that at the final time:
-    ibpm.plot_state( prob, data[2].val[end], data[2].t[end], var=:omega,
+    IBPM.plot_state( prob, data[2].val[end], data[2].t[end], var=:omega,
         xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40)
 
     #We can also use Julia's handy @animate macro to make a gif of the vorticity
     # field from our save data:
     anim = @animate for j = 1 : length(data[2].t)
-                ibpm.plot_state( prob, data[2].val[j], data[2].t[j], var=:omega,
+                IBPM.plot_state( prob, data[2].val[j], data[2].t[j], var=:omega,
                 xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40 )
             end
     #To save the animation, use gif():

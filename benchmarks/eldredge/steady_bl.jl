@@ -7,12 +7,12 @@ T = 100.0
 t = 0:Δt:T
 
 # Create plate
-bodies = [ibpm.make_plate( L, α, grid.h, x0, y0; n=nb)]
+bodies = [IBPM.make_plate( L, α, grid.h, x0, y0; n=nb)]
 
-prob = ibpm.IBProblem(grid, bodies, Δt, Re, freestream=freestream);
+prob = IBPM.IBProblem(grid, bodies, Δt, Re, freestream=freestream);
 
 #@load "benchmarks/eldredge/steady.bson" state
-state = ibpm.IBState(prob);
+state = IBPM.IBState(prob);
 
 run_sim!(t, state, prob, output=20) #advance to final time
 

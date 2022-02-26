@@ -1,4 +1,4 @@
-module ibpm
+module IBPM
 
 using LinearAlgebra
 using SparseArrays
@@ -91,7 +91,7 @@ function run_sim!(t, state, prob;
 	display_freq=25,
 	data::Array{user_var, 1})
 	for i=1:length(t)
-		ibpm.advance!(state, prob, t[i])
+		IBPM.advance!(state, prob, t[i])
 		if ~all(isfinite.(state.CL))
 			break
 		end

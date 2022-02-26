@@ -13,7 +13,7 @@ Oscillating plate at Reynolds number 200. See "Examples" folder for other exampl
 * __Problem__: Ideally this could interface with the DifferentialEquations.jl package eventually, so a "IBProblem" is defined in the same spirit as the "ODEProblem".  This combines a Model with precomputed operators relevant for advancing the state.
 * __State__: This is just a collection of pre-allocated arrays to store the vorticity, streamfunction, velocity flux, and body forces (including lift and drag).  It also has storage for the "memory" of the multi-step scheme for the nonlinear terms.  
 
-Once a Problem and State are defined, the basic time-stepping is to just call `advance!(state, prob, t)`.  There are also some helpful functions in `ibpm.jl` to run the full simulation, for instance to save a GIF of the solution.
+Once a Problem and State are defined, the basic time-stepping is to just call `advance!(state, prob, t)`.  There are also some helpful functions in `IBPM.jl` to run the full simulation, for instance to save a GIF of the solution.
 
 ### Current Status (4/22/21)
 Currently only rigid bodies have been implemented, although a single moving body can be simulated by moving the grid (a "body-fixed" reference frame, although the equations are in the inertial lab frame).  The reference cases (see the benchmarks folder) match the Fortran implementation to within $10^{-6}$ relative error, but with an average of about 40% speedup (and slightly more compared to the C++ code).

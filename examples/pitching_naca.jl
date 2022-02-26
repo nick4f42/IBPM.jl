@@ -1,4 +1,4 @@
-include("../src/ibpm.jl")
+include("../src/IBPM.jl")
 using Plots
 
 xlims = (-1.5, 6.5)
@@ -6,7 +6,7 @@ ylims = (-2.0, 2.0)
 boundary = (xlims..., ylims...) #left, right, bottom, and top of domain
 mg = 3   # num domains
 Δx = 0.02
-grid =  ibpm.make_grid(Δx, boundary, mg=mg)
+grid =  IBPM.make_grid(Δx, boundary, mg=mg)
 
 # # Define grid
 # nx = 400
@@ -18,7 +18,7 @@ grid =  ibpm.make_grid(Δx, boundary, mg=mg)
 # len = 8.0  # length of domain in x-direction
 
 # # Initialize grid
-# grid = ibpm.make_grid(nx, ny, offx, offy, len, mg=mg)
+# grid = IBPM.make_grid(nx, ny, offx, offy, len, mg=mg)
 
 # Other parameters
 Re = 200.0
@@ -31,16 +31,16 @@ A = 40.0 * π/180.0  # Pitch amplitude, degrees
 θ̇(t) = -ω*A*cos(ω*t);
 U(t) = 1.0
 V(t) = 0.0
-motion = ibpm.MovingGrid(U, V, θ, θ̇)
+motion = IBPM.MovingGrid(U, V, θ, θ̇)
 
 # Create plate
 x0 = 0.25
 nb = 48;  # Number of body points
 spec = "0012"
-bodies = [ibpm.make_naca(x0, nb, spec, motion=motion)]
+bodies = [IBPM.make_naca(x0, nb, spec, motion=motion)]
 
-prob = ibpm.IBProblem(grid, bodies, Δt, Re);
-state = ibpm.IBState(prob);
+prob = IBPM.IBProblem(grid, bodies, Δt, Re);
+state = IBPM.IBState(prob);
 
 T=2.0*(2π/ω)
 t=0:Δt:T
@@ -58,7 +58,7 @@ end
 
 function run_sim(t, state, prob; output=1, callback=(state, prob)->nothing)
 	for i=1:length(t)
-		ibpm.advance!(state, prob, t[i])
+		IBPM.advance!(state, prob, t[i])
         if mod(i,output) == 0
 			callback(state, prob);  # Primitive callback, can be used for plotting or other output
             @show (t[i], state.CD, state.CL, state.cfl)
@@ -80,7 +80,7 @@ function animated_sim(update_plot, t, state, prob;
 end
 
 anim = animated_sim(t, state, prob; output=100) do state, prob
-    ibpm.plot_state(prob, state, t, var=:omega, xlims=xlims, ylims=ylims, clims=(-5, 5))  # Plot vorticity
+    IBPM.plot_state(prob, state, t, var=:omega, xlims=xlims, ylims=ylims, clims=(-5, 5))  # Plot vorticity
     plot_naca(prob.model.bodies[1])
 end
 gif(anim, "examples/pitching_naca.gif", fps = 30)

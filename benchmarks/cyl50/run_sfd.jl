@@ -1,11 +1,11 @@
 include("config.jl")  # Set up grid and other parameters
 
-prob = ibpm.IBProblem(grid, cyls, Δt, Re, freestream=freestream);
-state = ibpm.IBState(prob);
+prob = IBPM.IBProblem(grid, cyls, Δt, Re, freestream=freestream);
+state = IBPM.IBState(prob);
 
 Δ = 0.5   # SFD damping
 χ = 3.0   # SFD filter width
-sfd_prob = ibpm.init_sfd(prob, state, Δ, χ)
+sfd_prob = IBPM.init_sfd(prob, state, Δ, χ)
 
 T = 10000
 t = 0:Δt:T
