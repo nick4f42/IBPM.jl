@@ -8,4 +8,3 @@ Information about which files to include within this directory
 include("models.jl")          # model, matrices, working memory
 include("state-types.jl")     # flow state
 include("problem-types.jl")   # problem definition
-include("read-user-vars.jl")
