@@ -7,7 +7,7 @@ boundary = (xlims..., ylims...) #left, right, bottom, and top of domain
 
 mg = 1   # num domains
 Δx = 0.02
-grid =  IBPM.make_grid(Δx, boundary, mg=mg)
+grid =  IBPM.MultiGrid(Δx, boundary, mg=mg)
 
 # Other parameters
 Re = 40.0

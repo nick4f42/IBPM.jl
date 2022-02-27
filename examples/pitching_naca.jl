@@ -6,7 +6,7 @@ ylims = (-2.0, 2.0)
 boundary = (xlims..., ylims...) #left, right, bottom, and top of domain
 mg = 3   # num domains
 Δx = 0.02
-grid =  IBPM.make_grid(Δx, boundary, mg=mg)
+grid =  IBPM.MultiGrid(Δx, boundary, mg=mg)
 
 # # Define grid
 # nx = 400
@@ -18,7 +18,7 @@ grid =  IBPM.make_grid(Δx, boundary, mg=mg)
 # len = 8.0  # length of domain in x-direction
 
 # # Initialize grid
-# grid = IBPM.make_grid(nx, ny, offx, offy, len, mg=mg)
+# grid = IBPM.MultiGrid(nx, ny, offx, offy, len, mg=mg)
 
 # Other parameters
 Re = 200.0

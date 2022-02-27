@@ -11,7 +11,7 @@ offy = 2.0; # offset in y dirn (same as offx but in y-dirn)
 len = 8.0  # length of domain in x-direction
 
 # Initialize grid
-grid = IBPM.make_grid(nx, ny, offx, offy, len, mg=mg)
+grid = IBPM.MultiGrid(nx, ny, offx, offy, len, mg=mg)
 
 # Other parameters
 Re = 200.0
