@@ -124,7 +124,7 @@ struct IBModel{T <: Grid, V <: Body} <: SolnModel
     function IBModel(grid::T,
                      bodies::Array{V, 1},
                      Re::Number;
-                     freestream=(Ux=0.0, Uy=0.0, inclination=0.0),
+                     freestream::Function,
                      xc=0.0,
                      yc=0.0) where {T <: Grid, V <: Body}
         mats = IBMatrices(grid, bodies)
