@@ -3,22 +3,9 @@ using Plots
 
 xlims = (-1.5, 6.5)
 ylims = (-2.0, 2.0)
-boundary = (xlims..., ylims...) #left, right, bottom, and top of domain
 mg = 3   # num domains
 Δx = 0.02
-grid =  IBPM.MultiGrid(Δx, boundary, mg=mg)
-
-# # Define grid
-# nx = 400
-# ny = 200
-# mg = 3   # num domains
-
-# offx = 1.5; # offset in x dirn (on fine domain, x-grid runs from -offx to len-offx.
-# offy = 2.0; # offset in y dirn (same as offx but in y-dirn)
-# len = 8.0  # length of domain in x-direction
-
-# # Initialize grid
-# grid = IBPM.MultiGrid(nx, ny, offx, offy, len, mg=mg)
+grid =  IBPM.MultiGrid(Δx, (xlims, ylims), mg=mg)
 
 # Other parameters
 Re = 200.0

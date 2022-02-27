@@ -2,16 +2,14 @@ include("../src/IBPM.jl")
 using Plots
 
 # Define grid
-nx = 400
-ny = 200
-mg = 3   # num domains
+Δx = 0.02  # grid cell size
+mg = 3  # num domains
 
-offx = 4.0; # offset in x dirn (on fine domain, x-grid runs from -offx to len-offx.
-offy = 2.0; # offset in y dirn (same as offx but in y-dirn)
-len = 8.0  # length of domain in x-direction
+xlims = (-4.0, 4.0)
+ylims = (-2.0, 2.0)
 
 # Initialize grid
-grid = IBPM.MultiGrid(nx, ny, offx, offy, len, mg=mg)
+grid = IBPM.MultiGrid(Δx, (xlims, ylims); mg=mg)
 
 # Other parameters
 Re = 200.0

@@ -3,10 +3,9 @@ include("../../src/IBPM.jl")
 # Define grid
 xlims = (-1.5, 6.5)
 ylims = (-2.0, 2.0)
-boundary = (xlims..., ylims...) #left, right, bottom, and top of domain
 mg = 5   # num domains
 Δx = 0.02
-grid =  IBPM.MultiGrid(Δx, boundary, mg=mg)
+grid =  IBPM.MultiGrid(Δx, (xlims, ylims), mg=mg)
 
 # Other parameters
 Re = 100.0

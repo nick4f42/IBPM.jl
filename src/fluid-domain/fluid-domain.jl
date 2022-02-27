@@ -25,16 +25,20 @@ struct MultiGrid <: Grid
 end
 
 
-function MultiGrid(h::Float64, boundary::NTuple{4,Float64}; mg::Int=1)
-
+function MultiGrid(
+        h::Float64,
+        boundary::NTuple{2, Tuple{Float64, Float64}};
+        mg::Int = 1
+    )
     #back out variables that the software needs from user defined vars
-    offx = -boundary[1]
-    offy = -boundary[3]
-    len = boundary[2]-boundary[1]
-    ylen = boundary[4]-boundary[3]
+    xlims, ylims = boundary
+    offx = -xlims[1]
+    offy = -ylims[1]
+    xlen = xlims[2] - xlims[1]
+    ylen = ylims[2] - ylims[1]
 
-    nx = Int64(round(len/h))
-    ny = Int64(round(ylen*nx/len))
+    nx = Int64(round(xlen/h))
+    ny = Int64(round(ylen*nx/xlen))
 
     nΓ  = (nx-1)*(ny-1)  # Number of circulation points
 
@@ -42,7 +46,7 @@ function MultiGrid(h::Float64, boundary::NTuple{4,Float64}; mg::Int=1)
     # Total num of vel (flux) points
     nq = nu + nv;
 
-    h = len / nx;  # Grid spacing
+    h = xlen / nx;  # Grid spacing
 
     "Return views to 2D arrays of fluxes"
     split_flux(q; lev=1) = reshape(@view(q[1:nu, lev]), nx+1, ny),
@@ -52,6 +56,6 @@ function MultiGrid(h::Float64, boundary::NTuple{4,Float64}; mg::Int=1)
     left = 0;  right = ny+1
     bot = 2*(ny+1); top = 2*(ny+1) + nx+1
 
-    return MultiGrid(nx, ny, nΓ, nq, mg, offx, offy, len, h,
+    return MultiGrid(nx, ny, nΓ, nq, mg, offx, offy, xlen, h,
         split_flux, left, right, bot, top)
 end
