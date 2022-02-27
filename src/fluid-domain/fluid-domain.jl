@@ -37,8 +37,8 @@ function MultiGrid(
     xlen = xlims[2] - xlims[1]
     ylen = ylims[2] - ylims[1]
 
-    nx = Int64(round(xlen/h))
-    ny = Int64(round(ylen*nx/xlen))
+    nx = round(Int, xlen / h)
+    ny = round(Int, ylen * nx / xlen)
 
     nΓ  = (nx-1)*(ny-1)  # Number of circulation points
 
