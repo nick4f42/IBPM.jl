@@ -40,6 +40,13 @@ mutable struct IBProblem <: AbstractIBProblem
     end
 end
 
+# TODO: Add constructors for IBModel and ExplicitScheme to return an AbstractIBProblem's
+# respective model and scheme. Then, gridstep and timestep can be easily implemented
+# to cover all AbstractIBProblem subtypes.
+
+gridstep(problem::IBProblem) = gridstep(problem.model.grid)
+timestep(problem::IBProblem) = timestep(problem.scheme)
+
 """
 Modified IBProblem to include base state.  Only modification to the code
 is the direct product called by the `nonlinear!` function
