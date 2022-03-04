@@ -61,6 +61,63 @@ Base.size(s::StateData) = size(s.data)
 Base.getindex(s::StateData, i::Int) = s.data[i]
 Base.IndexStyle(::StateData) = IndexLinear()
 
+function Base.empty!(s::StateData)
+    empty!(s.data)
+    empty!(s.t)
+    s
+end
+
+function Base.sizehint!(s::StateData, n)
+    sizehint!(s.data, n)
+    sizehint!(s.t, n)
+    s
+end
+
+
+function solve!(
+        datalist::AbstractVector{<:StateData},
+        problem::IBProblem,
+        t_range::Tuple{Float64, Float64};
+        callback = (_,_)->nothing
+    )
+    state = IBState(problem)
+
+    # TODO: Possibly add a stepsize function for ExplicitScheme subtypes
+    # to abstract the dt field
+    Δt = problem.scheme.dt
+    t = t_range[1] : Δt : t_range[2]
+
+    next_save_times = map(datalist) do data
+        itr = Iterators.Stateful(isempty(data.saveat) ? t : data.saveat)
+        empty!(data)
+        sizehint!(data, length(itr))
+        itr
+    end
+
+    for t_k in t
+        advance!(state, problem, t_k)
+        all(isfinite, state.CL) || break
+
+        callback(t_k, state)
+
+        for (data, t_saves) in zip(datalist, next_save_times)
+            while !isempty(t_saves) && peek(t_saves) < t_k + Δt / 2
+                popfirst!(t_saves)
+                push!(data.t, t_k)
+                push!(data.data, data.func(t_k, state))
+            end
+        end
+    end
+
+    state
+end
+
+function solve!(data::StateData, problem, t_range; kwargs...)
+    solve!([data], problem, t_range; kwargs...)
+end
+
+solve(problem, t_range; kwargs...) = solve!(StateData[], problem, t_range; kwargs...)
+
 
 """
     compute_cfl(state, prob)
