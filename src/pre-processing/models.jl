@@ -116,7 +116,7 @@ struct IBModel{T <: Grid, V <: Body} <: SolnModel
     grid::T
     bodies::Array{V, 1}         # Array of bodies
     Re::Float64                 # Reynolds number
-    freestream::NamedTuple      # Free-stream velocity
+    freestream::Function        # Free-stream velocity
     mats::IBMatrices            # Various precomputed sparse matrices
     work::WorkingMemory
     XX::Union{Array{Float64, 2}, Nothing}  #  x-locations for computing rotational fluxes
