@@ -20,6 +20,6 @@ include("plotting/plotting-include.jl")
 include("experimental/sfd.jl")
 
 include("quantities.jl")
-include("solver.jl")
+include("solve.jl")
 
 end
