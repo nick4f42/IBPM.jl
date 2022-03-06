@@ -62,8 +62,6 @@ struct AdamsBashforth <: ExplicitScheme
     β::Array{Float64, 1}
 end
 
-timestep(scheme::AdamsBashforth) = scheme.dt
-
 """
     AB2(dt::Float64)
 

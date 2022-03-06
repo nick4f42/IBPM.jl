@@ -19,9 +19,8 @@ function gridstep end
 
 """
     timestep(problem::AbstractIBProblem)
-    timestep(scheme::ExplicitScheme)
 
-The time step size of a problem or scheme.
+The time step size of a problem.
 """
 function timestep end
 
