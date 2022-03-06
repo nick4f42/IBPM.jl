@@ -31,7 +31,7 @@ function StateData(func::Function; kwargs...)
     StateData(func, return_type, nargs; kwargs...)
 end
 
-StateData(; kwargs...) = StateData(identity, Any, 1; kwargs...)
+StateData(; kwargs...) = StateData(deepcopy, Any, 1; kwargs...)
 
 function _infer_signature(func::Function)
     # Infer the number of arguments and return type of func
