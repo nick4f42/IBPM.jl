@@ -35,7 +35,4 @@ include("timestepping/timestepping-include.jl")
 include("plotting/plotting-include.jl")
 include("experimental/sfd.jl")
 
-include("quantities.jl")
-include("solve.jl")
-
 end
