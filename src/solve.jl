@@ -75,17 +75,11 @@ end
 
 
 function solve!(
-        datalist::AbstractVector{<:StateData},
-        problem::IBProblem,
-        t_range::Tuple{Float64, Float64};
+        datalist::AbstractVector{<:StateData}, problem::IBProblem;
         callback = (_,_)->nothing
     )
-    state = IBState(problem)
-
-    # TODO: Possibly add a stepsize function for ExplicitScheme subtypes
-    # to abstract the dt field
-    Δt = problem.scheme.dt
-    t = t_range[1] : Δt : t_range[2]
+    t = problem.t
+    Δt = step(t)
 
     next_save_times = map(datalist) do data
         itr = Iterators.Stateful(isempty(data.saveat) ? t : data.saveat)
@@ -93,6 +87,8 @@ function solve!(
         sizehint!(data, length(itr))
         itr
     end
+
+    state = IBState(problem)
 
     for t_k in t
         advance!(state, problem, t_k)
@@ -112,11 +108,11 @@ function solve!(
     state
 end
 
-function solve!(data::StateData, problem, t_range; kwargs...)
-    solve!([data], problem, t_range; kwargs...)
+function solve!(data::StateData, problem; kwargs...)
+    solve!([data], problem; kwargs...)
 end
 
-solve(problem, t_range; kwargs...) = solve!(StateData[], problem, t_range; kwargs...)
+solve(problem; kwargs...) = solve!(StateData[], problem; kwargs...)
 
 
 """

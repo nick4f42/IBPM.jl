@@ -23,29 +23,39 @@ A, Ainv, B, and Binv matrices
 mutable struct IBProblem <: AbstractIBProblem
     model::IBModel
     scheme::ExplicitScheme
+    t::typeof(range(0.0,1.0))
     A
     Ainv
     Binv
-    function IBProblem(grid::T where T <: Grid,
-                       bodies::Array{<:Body, 1},
-                       dt::Float64,
-                       Re::Float64;
-                       freestream::Function = t -> (0.0, 0.0)
-                       )
-        prob = new()
-        prob.model = IBModel(grid, bodies, Re; freestream=freestream)
-        prob.scheme = AB2(dt)   # Explicit time-stepping for nonlinear terms
-        prob.A, prob.Ainv, prob.Binv = get_AB(prob.model, dt)
-        return prob
+    function IBProblem(
+            grid::Grid, bodies::Vector{<:Body}, t::AbstractRange{Float64};
+            Re::Float64, freestream::Function
+        )
+        model = IBModel(grid, bodies, Re; freestream=freestream)
+        scheme = AB2(step(t))   # Explicit time-stepping for nonlinear terms
+        A, Ainv, Binv = get_AB(model, step(t))
+
+        new(model, scheme, t, A, Ainv, Binv)
     end
 end
 
-# TODO: Add constructors for IBModel and ExplicitScheme to return an AbstractIBProblem's
-# respective model and scheme. Then, gridstep and timestep can be easily implemented
-# to cover all AbstractIBProblem subtypes.
+function IBProblem(
+        grid::Grid, bodies::Vector{<:Body}, t_range::Tuple{Float64, Float64};
+        Re::Float64, freestream::Function
+    )
+    # TODO: 5000 time steps to find max is sort of arbitrary. Consider changing?
+    U_max = maximum(t_k -> hypot(freestream(t_k)...), LinRange(t_range..., 5000))
+
+    # satisfy CFL 0.2 constraint, with safety factor on max velocity
+    Δx = gridstep(grid)
+    Δt = 0.1 * Δx / (5.0 * U_max)
+    t = range(t_range..., step=Δt)
+
+    IBProblem(grid, bodies, t; Re, freestream)
+end
 
 gridstep(problem::IBProblem) = gridstep(problem.model.grid)
-timestep(problem::IBProblem) = timestep(problem.scheme)
+timestep(problem::IBProblem) = step(problem.t)
 
 """
 Modified IBProblem to include base state.  Only modification to the code
