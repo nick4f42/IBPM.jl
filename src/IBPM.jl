@@ -1,5 +1,7 @@
 module IBPM
 
+export IBProblem, MultiGrid, StateData, solve, solve!
+
 using LinearAlgebra
 using SparseArrays
 using FFTW
