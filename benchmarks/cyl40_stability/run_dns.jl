@@ -1,8 +1,8 @@
 include("config.jl")  # Set up grid and other parameters
 
-prob = ibpm.IBProblem(grid, cyls, Δt, Re, freestream=freestream);
+prob = IBPM.IBProblem(grid, cyls, Δt, Re, freestream=freestream);
 
-state = ibpm.IBState(prob);
+state = IBPM.IBState(prob);
 T = 100
 t = 0:Δt:T
 

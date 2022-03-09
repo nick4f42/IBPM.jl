@@ -73,7 +73,7 @@ end
 Compute trial circulation Γs that doesn't satisfy no-slip BCs
 
 Combine explicit Laplacian and nonlinear terms into a rhs
-   then invert implicit part to return trial circulation Γs
+then invert implicit part to return trial circulation Γs
 
 High-level version of AB2:
 rhs = A*Γ .-
@@ -134,7 +134,7 @@ end
 Solve the Poisson equation (25) in Colonius & Taira (2008).
 
 Dispatch based on the type of motion in the problem - allows precomputing
-    regularization and interpolation where possible.
+regularization and interpolation where possible.
 """
 function boundary_forces!(F̃b, qs, q0, prob)
     boundary_forces!( MotionType(prob.model.bodies), F̃b, qs, q0, prob)
@@ -186,7 +186,7 @@ function boundary_forces!(::Type{V} where V <: Motion,
 end
 
 """
-project_circ!(Γs, state, prob)
+    project_circ!(Γs, state, prob)
 
 Update circulation to satisfy no-slip condition.
 
@@ -254,9 +254,7 @@ function base_flux!(::Type{T} where T <: InertialMotion,
                     prob::IBProblem,
                     t::Float64)
     grid = prob.model.grid
-    Ux = prob.model.freestream.Ux(t)
-    Uy = prob.model.freestream.Uy(t)
-    α = prob.model.freestream.inclination(t)
+    Ux, Uy = prob.model.freestream(t)
 
     nu = grid.ny*(grid.nx+1);  # Number of x-flux points
     for lev = 1 : grid.mg
@@ -264,8 +262,8 @@ function base_flux!(::Type{T} where T <: InertialMotion,
         hc = grid.h * 2^( lev - 1 );
 
         # write fluid velocity flux in body-fixed frame
-        state.q0[ 1:nu, lev ] .= (Ux*cos(α) - Uy*sin(α))* hc      # x-flux
-        state.q0[ nu+1:end, lev ] .= (Ux*sin(α) + Uy*cos(α))*hc  # y-flux
+        state.q0[ 1:nu, lev ] .= Ux * hc      # x-flux
+        state.q0[ nu+1:end, lev ] .= Uy * hc  # y-flux
     end
 end
 
@@ -290,12 +288,10 @@ function base_flux!(::Type{MovingGrid},
     Uy0 = motion.U(t)*sin(α) + motion.V(t)*cos(α)
 
     ## Add in underlying freestream components
-    Uxf = prob.model.freestream.Ux(t)
-    Uyf = prob.model.freestream.Uy(t)
-    αf = prob.model.freestream.inclination(t)
-
-    Ux0 += Uxf*cos(αf)-Uyf*sin(αf)
-    Uy0 += Uxf*sin(αf)+Uyf*cos(αf)
+    let (Uxf, Uyf) = prob.model.freestream(t)
+        Ux0 += Uxf
+        Uy0 += Uyf
+    end
 
     state.q0 .*= 0.0
     for lev=1:grid.mg

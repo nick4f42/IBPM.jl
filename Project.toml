@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 name = "ibpm"
 uuid = "8b296a2c-dff5-4358-8eda-23c6898b9911"
 authors = ["Eric Wan <ewan2@illinois.edu> and contributors"]
+=======
+name = "IBPM"
+uuid = "9ee7c9eb-0998-47c1-b546-ff1bd56b95bf"
+authors = []
+>>>>>>> UI-overhaul
 version = "0.1.0"
 
 [deps]

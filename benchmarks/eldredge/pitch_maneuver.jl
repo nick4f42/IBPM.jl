@@ -18,11 +18,11 @@ G_max = maximum(G(t))
 θ(t) = -α_max*G(t)/G_max
 θ̇(t) = -α_max*Ġ(t)/G_max
 
-motion = ibpm.MovingGrid(t -> Uinf, θ, θ̇)
+motion = IBPM.MovingGrid(t -> Uinf, θ, θ̇)
 
 # Create plate
-bodies = [ibpm.make_plate( L, α, grid.h, x0, y0; motion=motion, n=nb)]
-prob = ibpm.IBProblem(grid, bodies, Δt, Re, Uinf=Uinf);
+bodies = [IBPM.make_plate( L, α, grid.h, x0, y0; motion=motion, n=nb)]
+prob = IBPM.IBProblem(grid, bodies, Δt, Re, Uinf=Uinf);
 
 # Load steady boundary layer solution from plate_steady.jl
 @load "benchmarks/eldredge/results/steady.bson" state
@@ -36,7 +36,7 @@ end
 
 function run_sim(t, F, state, prob)
 	for i=1:length(t)
-		ibpm.advance!(state, prob, t[i])
+		IBPM.advance!(state, prob, t[i])
 		F[i, 1] = state.CD[1]
 		F[i, 2] = state.CL[1]
 
@@ -52,7 +52,7 @@ function animated_sim(t, F, state, prob)
     anim = @animate for i=1:n_iter
 		sim_idx = (i-1)*nplt.+(1:nplt)
 		run_sim( @view(t[sim_idx]), @view(F[sim_idx, :]), state, prob )
-		ibpm.plot_state(state, grid, clims=(-5, 5))
+		IBPM.plot_state(state, grid, clims=(-5, 5))
         display( plot!(prob.model.bodies[1].xb[:, 1], prob.model.bodies[1].xb[:, 2],
             color=:grey, lw=5, legend=false) )
     end
