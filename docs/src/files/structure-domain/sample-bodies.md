@@ -1,4 +1,4 @@
 ```@autodocs
-Modules = [ibpm]
+Modules = [IBPM]
 Pages = ["sample-bodies.jl"]
 ```

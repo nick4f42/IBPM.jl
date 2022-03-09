@@ -1,4 +1,4 @@
 ```@autodocs
 Modules = [IBPM]
-Pages = ["dst-inversion.jl"]
+Pages = ["quantities.jl"]
 ```

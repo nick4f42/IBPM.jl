@@ -1,4 +1,4 @@
 ```@autodocs
-Modules = [ibpm]
-Pages = ["ibpm.jl"]
+Modules = [IBPM]
+Pages = ["IBPM.jl"]
 ```
