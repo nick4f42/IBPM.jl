@@ -5,96 +5,138 @@ In this example we will solve the problem of a uniform freestream of 1 m/s flowi
 The general workflow is to define the problem, choose desired state information to save, solve the problem, then analyze the solution. The full code for solving this example problem is:
 
 ```julia
-using IBPM.Quantities: lift_coef
+using .IBPM
+using .IBPM.Quantities: lift_coef
 
-T = 1.0
 Δx = 0.02
-Δt = 0.004
-Re = 100
-
 boundary = ((-1.0, 3.0), (-2.0, 2.0))
+gridcount = 5
+grid = MultiGrid(Δx, boundary; mg=gridcount)
 
-grid = MultiGrid(Δx, boundary; grids=5)
+cylinder = make_cylinder(0.5, Δx, (0.0, 0.0), motion=Static())
+bodies = [cylinder]
 
-body1 = Bodies.cylinder(0.5, Δx, (0.0, 0.0), motion=Static())
-bodies = [body1]
+T = 10.0
+Δt = 0.004
+times = range(0, T, step=Δt)
 
-freestream = Freestream((1.0, 0.0))
+Re = 100.0
+freestream = t -> (1.0, 0.0)
 
-problem = IBProblem(grid, bodies, Δt; freestream, Re)
+problem = IBProblem(grid, bodies, times; Re, freestream)
 
-lift = StateData(lift_coeff)
-states = StateData()
+lift = StateData(state -> lift_coef(state)[1])
+states = StateData(saveat=LinRange(0, T, 31))
 save_data = [lift, states]
 
-time_range = 0:Δt:T
+solve!(save_data, problem)
 
-solve!(save_data, problem, time_range)
+anim = @animate for (t, state) in zip(states.t, states)
+    print("t = ", t, '\r')
+    IBPM.plot_state(
+        problem, state, t, var=:omega,
+        xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40
+    )
+end
+
+gif(anim, "cyl_100.gif", fps=10)
 ```
 
 ## Step 1: Defining the Problem Parameters
 
 The problem is defined by:
-- Domain
-   - Left boundary
-   - Right boundary
-   - Upper boundary
-   - Lower boundary
-- Reynolds Number
+- Grid
+   - Domain boundaries
+   - Grid spacing
+   - (For a MultiGrid, number of grids)
 - Rigid Bodies
    - Position
    - Size
-   - Static or motion (can be function of time)
+   - Motion type (optional)
+- Simulation times
+- Reynolds Number
 - Freestream
    - X axis velocity (can be function of time)
    - Y axis velocity (can be funciton of time)
-   - Inclination
-- Total simulation time
-- Grid size
-- Time step size
-- Number of sub domains
+   - Inclination (optional)
 
-We can initialize these parameters and use them to define the problem:
+### Grid
 
+For this example, we are using the MultiGrid method for discretizing the domain. For other grid choices, see #todo#
+The multigrid is optionally defined using the number of grids. By default the multigrid only uses one grid.
 ```julia
-T = 1.0
 Δx = 0.02
-Δt = 0.004
-Re = 100
-
 boundary = ((-1.0, 3.0), (-2.0, 2.0))
-
-grid = MultiGrid(Δx, boundary; grids=5)
-
-body1 = Bodies.cylinder(0.5, Δx, (0.0, 0.0), motion=Static())
-bodies = [body1]
-
-freestream = Freestream((1.0, 0.0))
-
-problem = IBProblem(grid, bodies, Δt; freestream, Re)
+gridcount = 5
+grid = MultiGrid(Δx, boundary; mg=gridcount)
 ```
 
-The desired saved calculated quantities can be optionally defined:
+### Bodies
+
+Bodies are defined individually. The definition of a 2 dimensional cylinder necessitates the radius and position. 
+The motion of the cylinder over time can be optionally defined, being either static or in motion.
+See #motion link# for options on body motion. The motion is set to static by default.
 
 ```julia
-lift = StateData(lift_coeff)
-states = StateData()
-save_data = [lift, states]
+cylinder = make_cylinder(0.5, Δx, (0.0, 0.0), motion=Static())
 ```
 
-## Step 2: Solve the problem
-
-Once all required arguments are defined, they can be used to call the solve! method for a user defined time range or by default based on Δt.:
+Once all bodies are defined, in this case the one cylinder, they can be arranged in an array of bodies.
 
 ```julia
-time_range = 0:Δt:T #Interpolation maybe?
-
-solve!(save_data, problem, time_range)
+bodies = [cylinder]
 ```
 
-This solver does not return anything, but rather modifies the array of inputted saved quantities save_data and stores all data for each time step.
+### Simulation times
 
-## Step 3: Plot / Analyze the Solution
+The simulation times needs to be defined for the problem. To do this, simply use the user defined total 
+simulation time and time step.
+
+```julia
+T = 10.0
+Δt = 0.004
+times = range(0, T, step=Δt)
+```
+
+### Reynolds Number, Freestream
+
+Optional definitions of Reynolds number and freestream velocity. Freestream must be defined as a function of time. For options on freestream definition, see #freestream#.
+
+```julia
+Re = 100.0
+freestream = t -> (1.0, 0.0)
+```
+
+### Creating the Problem
+
+The problem can be defined once all of the above have been defined. 
+```julia
+problem = IBProblem(grid, bodies, times; Re, freestream)
+```
+
+## Step 2: Define Save Data
+Save data must be predefined before being solved. This is done by creating instances of SaveData. There are preexisting supported calculateable
+quantities built into module functionality, but user defined functions can be defined, calculated and saved. For quantities that can have solutions for
+individual bodies (for example lift and drag), access the solution for the desired body by accessing the respective index when creating the array of bodies above.
+```julia
+lift = StateData(state -> lift_coef(state)[1])
+drag = StateData(state -> drag_coef(state)[1])
+states = StateData(saveat=LinRange(0, T, 31))
+save_data = [lift, drag, states]
+```
+
+## Step 3: Solve the problem
+
+Once all required arguments are defined, they can be used to call the solve! method:
+
+```julia
+
+solve!(save_data, problem)
+```
+
+This solver does not return anything, but rather modifies the array of inputted saved quantities save_data depending on how each individual StateData is defined.
+
+## Step 4: Plot / Analyze the Solution
 
 The data can be accessed by referencing each specific desired calcualted quantitiy. For example, the lift coefficient at the third time step is:
 ```julia
@@ -106,5 +148,11 @@ state[end]
 ```
 To plot:
 ```julia
-#TODO
+anim = @animate for (t, state) in zip(states.t, states)
+    print("t = ", t, '\r')
+    IBPM.plot_state(
+        problem, state, t, var=:omega,
+        xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40
+    )
+end
 ```
