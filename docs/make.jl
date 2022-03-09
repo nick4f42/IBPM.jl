@@ -8,7 +8,16 @@ makedocs(
     sitename = "IBPM Documentation",
     pages = 
     [
-        "IBPM.jl" => "index.md",
+        "Immersed Bounudary Projection Method: Compuational Fluid Dynamics Solver" => "index.md",
+        "Manual" => [
+            "Getting Started: Installation and More" => "manual/getting_started.md",
+            "Simple Static Cylinder Tutorial (Before)" => "manual/examples/cyl_before.md",
+            "Simple Static Cylinder Tutorial (After)" => "manual/examples/cyl_after.md",
+            "Problem Options" => "manual/problem_options.md",
+            "Save Data Options" => "manual/save_options.md",
+            "Plotting" => "manual/plotting.md",
+            "Examples" => "manual/examples/examples.md"
+        ],
         "Files" => [
             "ibpm.jl" => "files/ibpm.md",
             "timestepping" => [
@@ -47,11 +56,7 @@ makedocs(
             "experimental" => [
                 "sfd.jl" => "files/experimental/sfd.md"
             ]
-        ],
-        "Guide" => [
-            "Simple Static Cylinder Tutorial (Before)" => "guide/guide1.md",
-            "Simple Static Cylinder Tutorial (After)" => "guide/guide2.md"
-            ]
+        ]
     ]
 )
 

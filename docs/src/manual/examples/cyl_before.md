@@ -1,10 +1,10 @@
-# Example 1: 2D Uniform flow around a stationary cylinder (Old UI)
+# Example: 2D Uniform flow around a stationary cylinder (Old UI)
  
 In this example we will solve the problem of a uniform freestream of 1 m/s flowing around a 2 dimentional cylinder of radius 0.5 m over the time interval from 0 to 10 seconds.
  
 The general workflow is to define the problem, choose desired state information to save, solve the problem, then analyze the solution. The full code for solving this example problem is:
 
-```@example
+```julia
 include("../src/ibpm.jl")
 using .ibpm
 using FileIO
@@ -45,7 +45,7 @@ gif(anim, "cyl_100.gif", fps=10)
 
 ```
 
-# Step 1: Defining the Problem Parameters
+## Step 1: Defining the Problem Parameters
 
 The problem is defined by:
 - Domain
@@ -69,7 +69,7 @@ The problem is defined by:
 
 We can initialize these parameters for later use in the solver:
 
-```@example
+```julia
 boundary = (-1.0, 3.0, -2.0, 2.0)
 Re = 100.0
 type = :cylinder
@@ -81,7 +81,7 @@ body = [(type=type, lengthscale=lengthscale, motion=motion, center=center)]
 
 There are a number of optional arguments that can be specified when inputted into the solver:
 
-```@example
+```julia
 freestream = (Ux=t->t^0.0,)
 T = 1.0 
 Δx = 0.02   
@@ -91,7 +91,7 @@ mg = 5
 
 Finally, the desired saved calculated quantities can be optionally defined:
 
-```@example
+```julia
 svfc = [ (t,state)->state.CL; (t,state)->state  ]
 svti = [ 0.0, T/30.0 ]
 svty = [ Vector{Float64}; Any ]
@@ -99,11 +99,11 @@ svty = [ Vector{Float64}; Any ]
 save_info = ( save_fcns = svfc, save_types = svty, save_times = svti )
 ```
 
-# Step 2: Solve the problem
+## Step 2: Solve the problem
 
-Once all required arguments are defined, they can be used to call the solver method IBPM\_advance() See [IBPM\_advance](../files/ibpm.md).:
+Once all required arguments are defined, they can be used to call the solver method IBPM\_advance() See [IBPM\_advance](../../files/ibpm.md).:
 
-```@example
+```julia
 prob, data, runtime = IBPM_advance( Re, boundary, body, freestream, 
     Δx=Δx, Δt=Δt, T=T, save_info=save_info )
 ```
@@ -113,15 +113,15 @@ This solver returns three things:
 - data::Array : saved data for use in analysis / plotting
 - runtime::Float64 : time elapsed while running simulation
 
-# Step 3: Plot / Analyze the Solution
+## Step 3: Plot / Analyze the Solution
 
 The data returned from the solver can be used with inbuilt plotting functionality at one time step (in this case the final time step):
-```@example
+```julia
 ibpm.plot_state( prob, data[2].val[end], data[2].t[end], var=:omega,
         xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40)
 ```
 or over a range of times and displayed as a .gif:
-```@example
+```julia
 anim = @animate for j = 1 : length(data[2].t)
             ibpm.plot_state( prob, data[2].val[j], data[2].t[j], var=:omega,
             xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40 )
