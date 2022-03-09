@@ -1,3 +1,30 @@
+"""
+    StateData{D, S<:AbstractVector} <: AbstractVector{D}
+
+Stores save data information for simulation. 
+
+# Constructors
+    StateData(
+        func::Function, ::Type{D}, nargs::Integer;
+        saveat::S=[]
+    ) where {D, S<:AbstractVector}
+
+    StateData(func::Function, ::Type{D}; kwargs...) where D
+
+    StateData(func::Function; kwargs...)
+
+# Arguments
+- `func::Function`: Function used to retrieve quantity. Of form (t, state) ->  function or (state) -> function. 
+Built in functions are found in Quantities module.
+- `D`: Type which the data will be stored as. 
+- `saveat::AbstractVector`: Optional keyword. Defines when data will be saved. Default is at all simlation timesteps.
+
+# Fields
+- `func::Function`: Function used to retrieve quantity.
+- `D`: Type which the data will be stored as. 
+- `t::Vector{Float64}`: Actualy simulation times.
+- `saveat::S`: Requested times to save at.
+"""
 struct StateData{D, S<:AbstractVector} <: AbstractVector{D}
     func::Function
     data::Vector{D}
@@ -33,6 +60,11 @@ end
 
 StateData(; kwargs...) = StateData(deepcopy, Any, 1; kwargs...)
 
+"""
+    _infer_signature(func::Function)
+
+Helper function which determines the format of the inputted function. Used to choose data storage type.
+"""
 function _infer_signature(func::Function)
     # Infer the number of arguments and return type of func
 
@@ -73,7 +105,20 @@ function Base.sizehint!(s::StateData, n)
     s
 end
 
+"""
+    solve!(
+        datalist::AbstractVector{<:StateData}, problem::IBProblem;
+        callback = (_,_)->nothing
+    )
 
+Takes in the posed simulation problem created in IBProblem and initialized array of SaveData, solves the problem and stores the data. Does not return anything.
+
+# Arguments
+- `datalist::AbstractVector{<:StateData}`: Desired save data.
+- `problem::IBProblem`: Stucture of type AbstractIBProblem. Defines what type of problem is being solved. Can be structs IBProblem, LinearizedIBProblem, SFDProblem. 
+See [`IBProblem`](@ref).
+- `callback = (_,_)->nothing`: Optional keyword.
+"""
 function solve!(
         datalist::AbstractVector{<:StateData}, problem::IBProblem;
         callback = (_,_)->nothing

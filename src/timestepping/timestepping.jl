@@ -2,7 +2,7 @@ using LinearAlgebra: norm  # FOR DEBUGGING
 
 
 """
-advance!(y::IBState, x::IBState, prob::AbstractIBProblem, t::Float64)
+    advance!(y::IBState, x::IBState, prob::AbstractIBProblem, t::Float64)
 
 Advance state x forward in time and save in y
 """
@@ -15,7 +15,7 @@ function advance!(y::IBState,
 end
 
 """
-advance(x::IBState, prob::AbstractIBProblem, t::Float64)
+    advance(x::IBState, prob::AbstractIBProblem, t::Float64)
 
 Advance state x forward in time (not mutating)
 """
@@ -30,7 +30,7 @@ end
 """
     advance!(state::IBState, prob::AbstractIBProblem, t::Float64)
 
-    Advance state forward in time.
+Advance state forward in time.
 """
 function advance!(state::IBState,
                   prob::T where T<:AbstractIBProblem,
@@ -73,7 +73,7 @@ end
 Compute trial circulation Γs that doesn't satisfy no-slip BCs
 
 Combine explicit Laplacian and nonlinear terms into a rhs
-   then invert implicit part to return trial circulation Γs
+then invert implicit part to return trial circulation Γs
 
 High-level version of AB2:
 rhs = A*Γ .-
@@ -134,7 +134,7 @@ end
 Solve the Poisson equation (25) in Colonius & Taira (2008).
 
 Dispatch based on the type of motion in the problem - allows precomputing
-    regularization and interpolation where possible.
+regularization and interpolation where possible.
 """
 function boundary_forces!(F̃b, qs, q0, prob)
     boundary_forces!( MotionType(prob.model.bodies), F̃b, qs, q0, prob)
@@ -186,7 +186,7 @@ function boundary_forces!(::Type{V} where V <: Motion,
 end
 
 """
-project_circ!(Γs, state, prob)
+    project_circ!(Γs, state, prob)
 
 Update circulation to satisfy no-slip condition.
 

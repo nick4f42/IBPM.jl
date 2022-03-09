@@ -1,12 +1,33 @@
 """
-Types of flow grids
-
-UniformGrid can probably be eliminated once the code is fairly stable
-
-MOVE TO fluid-domain??
+A collection of types of grids used to discretize and solve the linear system.
+Types of flow grids include:
+- MultiGrid
+- TODO: Quadtree
 """
 abstract type Grid end
 
+"""
+    MultiGrid <: Grid
+
+A type of Grid which uses a hierarchy of spacial discretizations to recursively solve until the solution converges. 
+While faster than brute force solving large linear systems, MultiGrid typically uses relatively high memory allocation.
+
+# Fields
+- `nx`: Number of x points in discretized domain.
+- `ny`: Number of y points in discretized domain.
+- `nΓ`: Number of ciruclation points in discretized domain.
+- `nq`: Number of vel flux points in discretized domain.
+- `mg`: Number of domains in MultiGrid.
+- `offx::Float64`: Offset of left border of domain.
+- `offy::Float64`: Offset of bottom border of domain.
+- `len::Float64`: Length of domain in x direction.
+- `h::Float64`: Grid cell size.
+- `split_flux::Any`: Return views to 2D array of fluxes. #THIS MAY BE UNCELAR, WHAT DOES THIS DO?#
+- `LEFT::Int`: Constant offset for indexing left boundary condition.
+- `RIGHT::Int`: Constant offset for indexing right boundary condition.
+- `BOT::Int`: Constant offset for indexing bottom boundary condition.
+- `TOP::Int`: Constant offset for indexing top boundary condition.
+"""
 struct MultiGrid <: Grid
     nx::Int
     ny::Int
@@ -24,6 +45,20 @@ struct MultiGrid <: Grid
     TOP::Int
 end
 
+"""
+    MultiGrid(
+        h::Float64,
+        boundary::NTuple{2, Tuple{Float64, Float64}};
+        mg::Int = 1
+    )
+
+Constructor for struct MultiGrid. Returns an instance of struct MultiGrid, see [`Main.IBPM.MultiGrid`](@ref).
+
+# Arugments
+- `h::Float64`: Grid spacing.
+- `boundary::NTuple{2, Tuple{Float64, Float64}}`: Tuple defining the boundaries of the domain.
+- `mg::Int`: Optional. Number of domains in MultiGrid. Default: `1`.
+"""
 function MultiGrid(
         h::Float64,
         boundary::NTuple{2, Tuple{Float64, Float64}};
@@ -59,4 +94,9 @@ function MultiGrid(
         split_flux, left, right, bot, top)
 end
 
+"""
+    gridstep(grid::MultiGrid)
+
+Returns the grid spacing for the passed in Grid, to be used in IBProblem (see [`Main.IBPM.IBProblem`](@ref)).
+"""
 gridstep(grid::MultiGrid) = grid.h

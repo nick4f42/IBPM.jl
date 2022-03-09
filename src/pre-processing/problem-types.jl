@@ -8,17 +8,42 @@ Maybe some opportunity for restructuring...
 Looking towards possible compatibility with DifferentialEquations.jl, this
         would be similar to the ODEProblem
 """
-
 abstract type AbstractIBProblem end
 
 """
+    IBProblem <: AbstractIBProblem
+
 Initialize the problem structure (matrices used, bodies and simulation
 parameters, time steppping scheme, ...)
 
 Note: the scheme actually speaks to the terms that are explicitly treated. This
 is a projection method the directly enforces the no-slip condition, so some terms
 are implicitly treated. This information is not contained in scheme, but in the
-A, Ainv, B, and Binv matrices
+`A`, `Ainv`, `B`, and `Binv` matrices.
+
+# Constructor
+    IBProblem(
+        grid::Grid,
+        bodies::Array{<:Body, 1},
+        t::Union{AbstractRange, Tuple},
+        Re::Float64;
+        freestream::Function = t -> (0.0, 0.0)
+    )
+
+# Arguments
+- `grid::Grid`: Grid struct of type Grid which defines and discretizes the domain.
+- `bodies::Array{<:Body, 1}`: 1D array of bodies created for simulation.
+- `t::Union{AbstractRange, Tuple}`: Time stepping interval. Can be passed in as an AbstractRange or a Tuple of the start and end time.
+- `Re::Float64`: Reynolds number.
+- `freestream::Function`: Optional. Freestream velocity. Default: `t -> (0.0, 0.0)`.
+
+# Fields
+- `model::IBModel`: Contains information about simulation parameters and stores static matrices. 
+- `scheme::ExplicitScheme`: Explicit time stepping scheme.
+- `t::AbstractRange`: Time steps for simulation.
+- `A`: A matrix in form of LinearMap.
+- `Ainv`: A inverse matrix in form of LinearMap.
+- `Binv`: B inverse matrix in form of LinearMap.
 """
 mutable struct IBProblem <: AbstractIBProblem
     model::IBModel
@@ -58,8 +83,38 @@ gridstep(problem::IBProblem) = gridstep(problem.model.grid)
 timestep(problem::IBProblem) = step(problem.t)
 
 """
+    LinearizedIBProblem <: AbstractIBProblem
+
+Create a linearized problem from the base_state and associated IBProblem
+
+NOTE: The `freestream` value in the nonlinear IBProblem will be incorrect
+for the linearized case, but this field is not used in
+base_flux!(..., prob::LinearizedIBProblem, ...)
+
 Modified IBProblem to include base state.  Only modification to the code
 is the direct product called by the `nonlinear!` function
+
+# Constructor
+    LinearizedIBProblem(
+        base_state::IBState,
+        base_prob::IBProblem,
+        dt::Float64
+    )
+
+# Arugments
+- `base_state::IBState`: 
+- `base_prob::IBProblem`: 
+- `dt::Float64`: Time stepping interval.
+
+# Fields
+- `model::IBModel`: Contains information about simulation parameters and stores static matrices. 
+- `scheme::ExplicitScheme`: Explicit time stepping scheme.
+- `base_state::IBState`: 
+- `QB::Array{Float64, 2}`: 
+- `ΓB::Array{Float64, 2}`: 
+- `A`: A matrix in form of LinearMap.
+- `Ainv`: A inverse matrix in form of LinearMap.
+- `Binv`: B inverse matrix in form of LinearMap.
 """
 mutable struct LinearizedIBProblem <: AbstractIBProblem
     model::IBModel
@@ -70,15 +125,6 @@ mutable struct LinearizedIBProblem <: AbstractIBProblem
     A
     Ainv
     Binv
-    """
-        LinearizedIBProblem(base_state, base_prob)
-
-    Create a linearized problem from the base_state and associated IBProblem
-
-    NOTE: The `freestream` value in the nonlinear IBProblem will be incorrect
-        for the linearized case, but this field is not used in
-        base_flux!(..., prob::LinearizedIBProblem, ...)
-    """
     function LinearizedIBProblem(
                     base_state::IBState,
                     base_prob::IBProblem,
