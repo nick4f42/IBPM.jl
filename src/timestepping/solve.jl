@@ -4,26 +4,17 @@
 Stores save data information for simulation. 
 
 # Constructors
-    StateData(
-        func::Function, ::Type{D}, nargs::Integer;
-        saveat::S=[]
-    ) where {D, S<:AbstractVector}
+    StateData(func, [type], [nargs]; [saveat::AbstractVector])
 
-    StateData(func::Function, ::Type{D}; kwargs...) where D
+When passed to [`solve!`](@ref), call `func` at each time in `saveat` and push the result to
+a `AbstractVector{type}`.
 
-    StateData(func::Function; kwargs...)
+`func` may be either called like `func(state)` or `func(t, state)` depending on if `nargs`
+is 1 or 2 (where `t` and `state` are the iteration's time and [`IBState`](@ref)). `type` and
+`nargs` are autodetermined if left out. If `saveat` is empty, save at all times (the
+default).
 
-# Arguments
-- `func::Function`: Function used to retrieve quantity. Of form (t, state) ->  function or (state) -> function. 
-Built in functions are found in Quantities module.
-- `D`: Type which the data will be stored as. 
-- `saveat::AbstractVector`: Optional keyword. Defines when data will be saved. Default is at all simlation timesteps.
-
-# Fields
-- `func::Function`: Function used to retrieve quantity.
-- `D`: Type which the data will be stored as. 
-- `t::Vector{Float64}`: Actualy simulation times.
-- `saveat::S`: Requested times to save at.
+The [`IBPM.Quantities`](@ref) module defines helpful functions that may be passed as `func`.
 """
 struct StateData{D, S<:AbstractVector} <: AbstractVector{D}
     func::Function
@@ -60,11 +51,6 @@ end
 
 StateData(; kwargs...) = StateData(deepcopy, Any, 1; kwargs...)
 
-"""
-    _infer_signature(func::Function)
-
-Helper function which determines the format of the inputted function. Used to choose data storage type.
-"""
 function _infer_signature(func::Function)
     # Infer the number of arguments and return type of func
 

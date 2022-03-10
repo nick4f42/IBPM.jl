@@ -23,28 +23,19 @@ A  - Implicit time-stepping operator for velocity flux
 NOTE: Most of the functionality for this is in fluid-operators/lin.jl
 
 # Constructor
-    IBMatrices(
-        grid::Grid, 
-        bodies::Array{Body, 1}
-    )
+    IBMatrices(grid::Grid, bodies::Vector{<:Body})
 
 # Arguments
 - `grid::Grid`: Grid struct of type Grid which defines and discretizes the domain.
 - `bodies::Array{Body, 1}`: 1D array of bodies created for simulation.
-
-# Fields
-- `C::LinearMap`: Basic curl operator for single-grid in form of linear map.
-- `Λ::Array{Float64, 2}`: Laplcacian eigenvalues.
-- `Δinv::LinearMap`: Inverse of Laplacian in form of linear map.
-- `E::LinearMap`: Interpolation/regularization matrix in form of linear map.
-- `dist_plan::Any`: Plans needed for optimized discrete sine transform (DST) inversion.
 """
 mutable struct IBMatrices
-    C::LinearMap
-    Λ::Array{Float64, 2}
-    Δinv::LinearMap
-    E::LinearMap
-    dst_plan::Any
+    C::LinearMap  # Basic curl operator for single-grid in form of linear map.
+    Λ::Array{Float64, 2}  # Laplcacian eigenvalues.
+    Δinv::LinearMap  # Inverse of Laplacian in form of linear map.
+    E::LinearMap  # Interpolation/regularization matrix in form of linear map.
+    dst_plan::Any  # Plans needed for optimized discrete sine transform (DST) inversion.
+
     function IBMatrices(grid::T, bodies::Array{V, 1}) where T <: Grid where V <: Body
         mats = new()
         Γwork = zeros(grid.nx-1, grid.ny-1)
@@ -81,16 +72,13 @@ abstract type ExplicitScheme end
 
 The group of multistep methods known as Adams-Bashforth methods. Currently supports:
 - Two step Adams-Bashforth Method
-
-# Fields
-- `dt::Float64`: Time stepping interval.
-- `β::Array{Float64, 1}`: Coefficients for the time stepping equation.
 """
-# TODO: Make constructor to generate β automatically
 struct AdamsBashforth <: ExplicitScheme
     dt::Float64
     β::Array{Float64, 1}
 end
+
+# TODO: Make AdamsBashforth constructor to generate β automatically
 
 """
     AB2(dt::Float64)
@@ -115,31 +103,18 @@ computation process.
 
 # Arguments
 - `grid::Grid`: Grid struct of type Grid which defines and discretizes the domain.
-
-# Fields
-- `q1::Array{Float64, 2}`: Trial flux qs.
-- `q2::Array{Float64, 1}`: boundary_forces.
-- `q3::Array{Float64, 1}`: Nonlinear.
-- `q4::Array{Float64, 1}`: Nonlinear.
-- `q5::Array{Float64, 1}`: Nonlinear.
-- `q6::Array{Float64, 1}`: Linear stability analysis.
-- `Γ1::Array{Float64, 2}`: Trial circulation Γs.
-- `Γ2::Array{Float64, 1}`: trial_state, project_circ.
-- `Γ3::Array{Float64, 1}`: vort2flux.
-- `Γbc::Array{Float64, 1}`: Poisson boundary conditions for multigrid.
-- `rhsbc::Array{Float64, 1}`: Time-stepping boundary conditions for multigrid.
 """
 mutable struct WorkingMemory
-    q1::Array{Float64, 2}
-    q2::Array{Float64, 1}
-    q3::Array{Float64, 1}
-    q4::Array{Float64, 1}
-    q5::Array{Float64, 1}
-    q6::Array{Float64, 1}
-    Γ1::Array{Float64, 2}
-    Γ2::Array{Float64, 1}
-    Γ3::Array{Float64, 1}
-    Γbc::Array{Float64, 1}    # Poisson boundary conditions for multigrid
+    q1::Array{Float64, 2}  # Trial flux qs.
+    q2::Array{Float64, 1}  # boundary_forces.
+    q3::Array{Float64, 1}  # Nonlinear.
+    q4::Array{Float64, 1}  # Nonlinear.
+    q5::Array{Float64, 1}  # Nonlinear.
+    q6::Array{Float64, 1}  # Linear stability analysis.
+    Γ1::Array{Float64, 2}  # Trial circulation Γs.
+    Γ2::Array{Float64, 1}  # trial_state, project_circ.
+    Γ3::Array{Float64, 1}  # vort2flux.
+    Γbc::Array{Float64, 1}  # Poisson boundary conditions for multigrid
     rhsbc::Array{Float64, 1}  # Time-stepping boundary conditions for multigrid
     function WorkingMemory(grid::Grid)
         work = new()
@@ -190,16 +165,6 @@ Is passed as an arugment into IBProblem, see [`Main.IBPM.IBProblem`](@ref).
 - `freestream::Function`: Free-stream velocity.
 - `xc=0.0`: x coordinate offset for calculating rotational fluxes.
 - `yc=0.0`: y coordinate offset for calculating rotational fluxes.
-
-# Fields
-- `grid::Grid`: Grid struct of type Grid which defines and discretizes the domain.
-- `bodies::Array{Body, 1}`: Array of bodies.
-- `Re::Float64`: Reynolds number.
-- `freestream::NamedTuple`: Free-stream velocity.
-- `mats::IBMatrices`: Various precomputed sparse matrices.
-- `work::WorkingMemory`: Preallocated arrays for storing woriking memory.
-- `XX::Union{Array{Float64, 2}, Nothing}`: x-locations for computing rotational fluxes.
-- `YY::Union{Array{Float64, 2}, Nothing}`: y-locations for computing rotational fluxes.
 """
 struct IBModel{T <: Grid, V <: Body} <: SolnModel
     grid::T

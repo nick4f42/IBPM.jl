@@ -25,9 +25,9 @@ are implicitly treated. This information is not contained in scheme, but in the
     IBProblem(
         grid::Grid,
         bodies::Array{<:Body, 1},
-        t::Union{AbstractRange, Tuple},
-        Re::Float64;
-        freestream::Function = t -> (0.0, 0.0)
+        t::Union{AbstractRange, Tuple};
+        Re::Float64,
+        freestream::Function
     )
 
 # Arguments
@@ -35,15 +35,7 @@ are implicitly treated. This information is not contained in scheme, but in the
 - `bodies::Array{<:Body, 1}`: 1D array of bodies created for simulation.
 - `t::Union{AbstractRange, Tuple}`: Time stepping interval. Can be passed in as an AbstractRange or a Tuple of the start and end time.
 - `Re::Float64`: Reynolds number.
-- `freestream::Function`: Optional. Freestream velocity. Default: `t -> (0.0, 0.0)`.
-
-# Fields
-- `model::IBModel`: Contains information about simulation parameters and stores static matrices. 
-- `scheme::ExplicitScheme`: Explicit time stepping scheme.
-- `t::AbstractRange`: Time steps for simulation.
-- `A`: A matrix in form of LinearMap.
-- `Ainv`: A inverse matrix in form of LinearMap.
-- `Binv`: B inverse matrix in form of LinearMap.
+- `freestream::Function`: Freestream velocity.
 """
 mutable struct IBProblem <: AbstractIBProblem
     model::IBModel
@@ -105,16 +97,6 @@ is the direct product called by the `nonlinear!` function
 - `base_state::IBState`: 
 - `base_prob::IBProblem`: 
 - `dt::Float64`: Time stepping interval.
-
-# Fields
-- `model::IBModel`: Contains information about simulation parameters and stores static matrices. 
-- `scheme::ExplicitScheme`: Explicit time stepping scheme.
-- `base_state::IBState`: 
-- `QB::Array{Float64, 2}`: 
-- `ΓB::Array{Float64, 2}`: 
-- `A`: A matrix in form of LinearMap.
-- `Ainv`: A inverse matrix in form of LinearMap.
-- `Binv`: B inverse matrix in form of LinearMap.
 """
 mutable struct LinearizedIBProblem <: AbstractIBProblem
     model::IBModel
