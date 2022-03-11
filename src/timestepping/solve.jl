@@ -1,4 +1,20 @@
 """
+    gridstep(problem::AbstractIBProblem)
+    gridstep(grid::Grid)
+
+The minimum grid step size of a problem or grid.
+"""
+function gridstep end
+
+"""
+    timestep(problem::AbstractIBProblem)
+
+The time step size of a problem.
+"""
+function timestep end
+
+
+"""
     StateData{D, S<:AbstractVector} <: AbstractVector{D}
 
 Stores save data information for simulation. 

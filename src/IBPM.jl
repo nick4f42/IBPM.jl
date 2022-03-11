@@ -10,22 +10,6 @@ using IterativeSolvers
 using InplaceOps  # @! macro
 using Plots
 
-
-"""
-    gridstep(problem::AbstractIBProblem)
-    gridstep(grid::Grid)
-
-The minimum grid step size of a problem or grid.
-"""
-function gridstep end
-
-"""
-    timestep(problem::AbstractIBProblem)
-
-The time step size of a problem.
-"""
-function timestep end
-
 #Caution, include order matters!
 include("fluid-domain/fluid-domain-include.jl")
 include("structure-domain/structure-domain-include.jl")
