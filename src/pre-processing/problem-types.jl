@@ -21,21 +21,29 @@ is a projection method the directly enforces the no-slip condition, so some term
 are implicitly treated. This information is not contained in scheme, but in the
 `A`, `Ainv`, `B`, and `Binv` matrices.
 
-# Constructor
+---
+
     IBProblem(
         grid::Grid,
-        bodies::Array{<:Body, 1},
-        t::Union{AbstractRange, Tuple};
+        bodies::Vector{<:Body},
+        t_span::NTuple{2,Float64},
+        [dt::Float64];
         Re::Float64,
         freestream::Function
     )
 
 # Arguments
-- `grid::Grid`: Grid struct of type Grid which defines and discretizes the domain.
-- `bodies::Array{<:Body, 1}`: 1D array of bodies created for simulation.
-- `t::Union{AbstractRange, Tuple}`: Time stepping interval. Can be passed in as an AbstractRange or a Tuple of the start and end time.
-- `Re::Float64`: Reynolds number.
-- `freestream::Function`: Freestream velocity.
+
+- `grid`: Discretization of the fluid domain.
+- `bodies`: The bodies to simulate.
+- `t_span`: The starting and ending time.
+- `dt`: The time step. Auto-determined by default.
+- `Re`: Reynolds number.
+- `freestream`: The freestream velocity as a function of time. `freestream(t)` returns a
+        tuple of each velocity component at `t`.
+
+By default, `dt` is chosen to aim for a CFL of 0.1 with a saftey factor of 5 on the max
+velocity.
 """
 mutable struct IBProblem <: AbstractIBProblem
     model::IBModel
@@ -45,30 +53,30 @@ mutable struct IBProblem <: AbstractIBProblem
     Ainv
     Binv
     function IBProblem(
-            grid::Grid, bodies::Vector{<:Body}, t::AbstractRange{Float64};
+            grid::Grid, bodies::Vector{<:Body}, t_span::NTuple{2,Float64}, dt::Float64;
             Re::Float64, freestream::Function
         )
         model = IBModel(grid, bodies, Re; freestream=freestream)
-        scheme = AB2(step(t))   # Explicit time-stepping for nonlinear terms
-        A, Ainv, Binv = get_AB(model, step(t))
+        scheme = AB2(dt)   # Explicit time-stepping for nonlinear terms
+        A, Ainv, Binv = get_AB(model, dt)
 
+        t = range(t_span..., step=dt)
         new(model, scheme, t, A, Ainv, Binv)
     end
 end
 
 function IBProblem(
-        grid::Grid, bodies::Vector{<:Body}, t_range::Tuple{Float64, Float64};
+        grid::Grid, bodies::Vector{<:Body}, t_span::NTuple{2,Float64};
         Re::Float64, freestream::Function
     )
     # TODO: 5000 time steps to find max is sort of arbitrary. Consider changing?
-    U_max = maximum(t_k -> hypot(freestream(t_k)...), LinRange(t_range..., 5000))
+    U_max = maximum(t_k -> hypot(freestream(t_k)...), LinRange(t_span..., 5000))
 
     # satisfy CFL 0.2 constraint, with safety factor on max velocity
     Δx = gridstep(grid)
-    Δt = 0.1 * Δx / (5.0 * U_max)
-    t = range(t_range..., step=Δt)
+    dt = 0.1 * Δx / (5.0 * U_max)
 
-    IBProblem(grid, bodies, t; Re, freestream)
+    IBProblem(grid, bodies, t_span, dt; Re, freestream)
 end
 
 gridstep(problem::IBProblem) = gridstep(problem.model.grid)
