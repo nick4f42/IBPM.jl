@@ -29,7 +29,7 @@ are implicitly treated. This information is not contained in scheme, but in the
         t_span::NTuple{2,Float64},
         [dt::Float64];
         Re::Float64,
-        freestream::Function
+        freestream::Function = t -> (0.0, 0.0)
     )
 
 # Arguments
@@ -40,7 +40,7 @@ are implicitly treated. This information is not contained in scheme, but in the
 - `dt`: The time step. Auto-determined by default.
 - `Re`: Reynolds number.
 - `freestream`: The freestream velocity as a function of time. `freestream(t)` returns a
-        tuple of each velocity component at `t`.
+        tuple of each velocity component at `t`. Defaults to zero.
 
 By default, `dt` is chosen to aim for a CFL of 0.1 with a saftey factor of 5 on the max
 velocity.
@@ -53,8 +53,12 @@ mutable struct IBProblem <: AbstractIBProblem
     Ainv
     Binv
     function IBProblem(
-            grid::Grid, bodies::Vector{<:Body}, t_span::NTuple{2,Float64}, dt::Float64;
-            Re::Float64, freestream::Function
+            grid::Grid,
+            bodies::Vector{<:Body},
+            t_span::NTuple{2,Float64},
+            dt::Float64;
+            Re::Float64,
+            freestream::Function = t -> (0.0, 0.0)
         )
         model = IBModel(grid, bodies, Re; freestream=freestream)
         scheme = AB2(dt)   # Explicit time-stepping for nonlinear terms
