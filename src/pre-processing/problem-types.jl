@@ -55,7 +55,7 @@ mutable struct IBProblem <: AbstractIBProblem
     function IBProblem(
             grid::Grid,
             bodies::Vector{<:Body},
-            t_span::NTuple{2,Float64},
+            t_span::NTuple{2,Real},
             dt::Float64;
             Re::Float64,
             freestream::Function = t -> (0.0, 0.0)
@@ -70,7 +70,7 @@ mutable struct IBProblem <: AbstractIBProblem
 end
 
 function IBProblem(
-        grid::Grid, bodies::Vector{<:Body}, t_span::NTuple{2,Float64};
+        grid::Grid, bodies::Vector{<:Body}, t_span::NTuple{2,Real};
         Re::Float64, freestream::Function
     )
     # TODO: 5000 time steps to find max is sort of arbitrary. Consider changing?
