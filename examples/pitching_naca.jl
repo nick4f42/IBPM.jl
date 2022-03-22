@@ -1,11 +1,15 @@
 include("../src/IBPM.jl")
+
+using .IBPM
+using .IBPM.Quantities: vorticity, body_points
+
 using Plots
 
 xlims = (-1.5, 6.5)
 ylims = (-2.0, 2.0)
 mg = 3   # num domains
 Δx = 0.02
-grid =  IBPM.MultiGrid(Δx, (xlims, ylims), mg=mg)
+mgrid = MultiGrid(Δx, (xlims, ylims), mg=mg)
 
 # Other parameters
 Re = 200.0
@@ -20,54 +24,26 @@ U(t) = 1.0
 V(t) = 0.0
 motion = IBPM.MovingGrid(U, V, θ, θ̇)
 
-# Create plate
+# Create airfoil
 x0 = 0.25
 nb = 48;  # Number of body points
-spec = "0012"
-bodies = [IBPM.make_naca(x0, nb, spec, motion=motion)]
+bodies = [IBPM.make_naca(x0, nb, "0012", motion=motion)]
 
-prob = IBPM.IBProblem(grid, bodies, Δt, Re);
-state = IBPM.IBState(prob);
+T = 2.0*(2π/ω)
 
-T=2.0*(2π/ω)
-t=0:Δt:T
+prob = IBProblem(mgrid, bodies, (0, T), Δt; Re)
 
-function plot_naca(body)
-    nb = size(body.xb, 1)÷2
-    xC = body.xb[1:nb, 1]
-    yU = body.xb[1:nb, 2]
-    yL = body.xb[end:-1:nb+1, 2]
-    yC = 0.5*(yU + yL)  # Camber line
-    yT = 0.5*(yU - yL)  # Thickness
-    display( plot!(xC, yC, ribbon=yT,
-        color=:grey, lw=0, fillalpha=1.0, legend=false) )
+anim = Animation()
+
+save_anim = StateCallback(prob; at=range(0, T, length=200)) do t, state
+    plot(prob, state, vorticity; subgrids=1:1, clims=(-5, 5))
+    plot!(prob, state, body_points; color=:black)
+    frame(anim)
 end
 
-function run_sim(t, state, prob; output=1, callback=(state, prob)->nothing)
-	for i=1:length(t)
-		IBPM.advance!(state, prob, t[i])
-        if mod(i,output) == 0
-			callback(state, prob);  # Primitive callback, can be used for plotting or other output
-            @show (t[i], state.CD, state.CL, state.cfl)
-        end
-	end
+solve(prob, [save_anim]) do t, state
+    percent = round(100*t/T, digits=1)
+    print("solving... ", percent, "%\r")
 end
 
-function animated_sim(update_plot, t, state, prob;
-    nplt=100,
-    output=1,
-    callback=(state, prob)->nothing)
-    n_iter = length(t)÷nplt
-    anim = @animate for i=1:n_iter
-        sim_idx = (i-1)*nplt.+(1:nplt)
-        run_sim( @view(t[sim_idx]), state, prob; output=output, callback=callback )
-        update_plot(state, prob)
-    end
-    return anim
-end
-
-anim = animated_sim(t, state, prob; output=100) do state, prob
-    IBPM.plot_state(prob, state, t, var=:omega, xlims=xlims, ylims=ylims, clims=(-5, 5))  # Plot vorticity
-    plot_naca(prob.model.bodies[1])
-end
-gif(anim, "examples/pitching_naca.gif", fps = 30)
+gif(anim, "examples/pitching_naca.gif", fps=30)
