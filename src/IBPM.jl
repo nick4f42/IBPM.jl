@@ -1,6 +1,8 @@
 module IBPM
 
-export IBProblem, MultiGrid, StateData, solve, solve!
+export IBProblem, MultiGrid
+export InterpNone, InterpQuadratic
+export StateCallback, StateData, solve, solve!
 
 using LinearAlgebra
 using SparseArrays
