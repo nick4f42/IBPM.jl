@@ -4,6 +4,8 @@
 *.jld2
 
 *.png
+!/docs/src/assets/*.png
+
 clear_mem.sh
 notes.txt
 ./*.gif

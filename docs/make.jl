@@ -7,7 +7,10 @@ using .IBPM
 makedocs(
     sitename = "IBPM Documentation",
     format = Documenter.HTML(assets = [
-        "assets/documenter-dark-2.css"
+        "assets/documenter-dark-2.css",
+        "assets/cyl_100_anim.gif",
+        "assets/cyl_100_heatmap.png",
+        "assets/cyl_100_plot.png",
     ]),
     pages = 
     [
@@ -16,6 +19,7 @@ makedocs(
             "Getting Started: Installation and More" => "manual/getting_started.md",
             "Simple Static Cylinder Tutorial (Before)" => "manual/examples/cyl_before.md",
             "Simple Static Cylinder Tutorial (After)" => "manual/examples/cyl_after.md",
+            "Tutorial 1" => "manual/cyl_100.md",
             "Problem Options" => "manual/problem_options.md",
             "Save Data Options" => "manual/save_options.md",
             "Plotting" => "manual/plotting.md",
