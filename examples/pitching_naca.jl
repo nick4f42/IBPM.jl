@@ -36,13 +36,12 @@ prob = IBPM.IBProblem(mgrid, bodies, (0, T), Δt; Re)
 
 anim = Animation()
 
-framerate = 30
 boundary = (xlims, ylims)
 discretization = (20, 20)
-particlePlot = IBPM.ParticlePlot(framerate, discretization, mgrid)
+particlePlot = IBPM.ParticlePlot(discretization, mgrid)
 save_anim = IBPM.StateCallback(prob; at=range(0, T, length=200)) do t, state
     plot(prob, state, IBPM.Quantities.vorticity; subgrids=1:1, clims=(-5, 5))
-    IBPM.plotParticles(Δt, particlePlot, state, mgrid)
+    IBPM.plotParticles(T/(200-1), particlePlot, state, mgrid)
     plot!(prob, state, IBPM.Quantities.body_points; color=:black)
     frame(anim)
 end
@@ -52,4 +51,4 @@ IBPM.solve(prob, [save_anim]) do t, state
     print("solving... ", percent, "%\r")
 end
 
-gif(anim, "IBPM.jl/examples/pitching_naca_pp_11.gif", fps=30)
+gif(anim, "IBPM.jl/examples/pitching_naca_pp_12.gif", fps=30)

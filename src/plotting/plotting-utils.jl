@@ -242,7 +242,6 @@ end
 using .IBPM.Quantities
 
 mutable struct ParticlePlot
-    framerate::Int64
     particlePos::Any
     particlePosEdgesX::Any
     particlePosEdgesY::Any
@@ -251,7 +250,7 @@ mutable struct ParticlePlot
     distance0Y::Float64
     xstate::Any
     ystate::Any
-    function ParticlePlot(framerate, discretization, grid)
+    function ParticlePlot(discretization, grid)
         pp = new()
 
         nx, ny = grid.nx, grid.ny
@@ -287,7 +286,6 @@ mutable struct ParticlePlot
         pp.ystate = y[2:end-1]
 
         nParticles = discretization[1] * discretization[2]
-        pp.framerate = framerate
         pp.particlePos = Array{Float64}(undef, 2, nParticles)
         xlen = x[end] - x[1]
         ylen = y[end] - y[1]
@@ -445,6 +443,5 @@ end
 
 function plotParticles(dt, particlePlot::ParticlePlot, state, grid)
     scatter!(particlePlot.particlePos[1,:], particlePlot.particlePos[2,:])
-    dt = 1/particlePlot.framerate
     particleUpdate!(dt, particlePlot, state)
 end
