@@ -4,7 +4,7 @@ State variables (stores everything needed for time stepping)
 """
 abstract type State end
 
-mutable struct IBState{T<:Number, G<:Grid} <: State
+mutable struct IBState{T<:Number} <: State
     q::Array{T, 2}
     q0::Array{T, 2}
     Γ::Array{T, 2}     # Circulation
@@ -17,11 +17,11 @@ mutable struct IBState{T<:Number, G<:Grid} <: State
     cfl::Float64
     slip::Float64
     xb::Array{Array{Float64, 2}, 1}
-    grid::Base.RefValue{G}
+    t::Float64
     # Default constructor (all undefined references)
-    IBState() = new{Float64,MultiGrid}()
+    IBState() = new{Float64}()
     # Default constructor (all undefined references)
-    IBState(::Type{T}) where T <: Number = new{T,MultiGrid}()
+    IBState(::Type{T}) where T <: Number = new{T}()
 end
 
 "Construct empty state from AbstractIBProblem"
@@ -40,8 +40,6 @@ function IBState(prob)
     state.CD = zeros(length(prob.model.bodies))
     state.CL = zeros(length(prob.model.bodies))
     state.cfl, state.slip = 0.0, 0.0
-
-    state.grid = Ref(grid)
 
     state.xb = [zeros(nb[i], 2) for i=1:length(nf)]
     for j=1:length(prob.model.bodies)

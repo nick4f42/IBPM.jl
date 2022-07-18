@@ -1,44 +1,55 @@
-include("../src/IBPM.jl")
+using IBPM
+using IBPM: Bodies
+using IBPM.Quantities
 
-import Plots
-using Plots: plot, @animate, gif
+using Printf
+using Plots
 
-using .IBPM
-using .IBPM.Quantities: lift_coef
+xlim = (-1.0, 3.0) # x bounds
+ylim = (-2.0, 2.0) # y bounds
+dx = 0.01          # Grid step size
+mg = 3             # Number of subdomains
+mgrid = MultiGrid(dx, (xlim, ylim); mg=mg)
 
-Δx = 0.02  # Grid step size
-boundary = ((-1.0, 3.0), (-2.0, 2.0))  # x and y boundaries of domain
-gridcount = 5  # Number of sub-domains
-grid = MultiGrid(Δx, boundary; mg=gridcount)
+r = 0.5 # cylinder radius
+bodies = [Bodies.cylinder((0.0, 0.0), r, dx)]
 
-r = 0.5
-bodies = [ IBPM.make_cylinder(r, Δx, 0.0, 0.0) ]
+# Freestream velocity
+freestream(t) = (1.0, 0.0)
 
-Δt = 0.004  # Time step size
-T = 10.0  # Final time
-times = range(0, T, step=Δt)
+Re = 100.0 # Reynolds number
+dt = 0.002 # Time step size
+T = 10.0   # Final time
 
-# Δt can be autodetermined by supplying a tuple of initial and final times.
-# The default aims for a CFL of 0.1 with a 5x safety factor on max velocity.
-# times = (0.0, 1.0)
+# Specify the problem using the grid, bodies, freestream, etc
+prob = IBProblem(mgrid, bodies, freestream; Re=Re, dt=dt)
 
-Re = 100.0  # Reynolds number
-freestream = t -> (1.0, 0.0)  # Freestream velocity as a function of time
+# Create functions vorticity(state) and bodypoints(state)
+vorticity = Vorticity(prob)
+bodypoints = BodyPoints(prob)
 
-# lift_coef returns the lift coefficient for each body, so take the first
-lift = StateData(state -> lift_coef(state)[1])
-# By default, the entire state is saved
-states = StateData(saveat=LinRange(0, T, 31))
+# Initialize animation
+anim = Animation()
 
-problem = IBProblem(grid, bodies, times; Re, freestream)
-solve!([lift, states], problem)
+# Create callback that adds to animation
+save_anim = at_times(range(0, T, length=120)) do state
+    # Plot the vorticity and bodies
+    xs = range(-2, 6, step=dx)
+    ys = range(-3, 3, step=dx)
+    fluidplot(xs, ys, vorticity(state); clims=(-5, 5))
+    bodyplot!(bodypoints(state))
 
-anim = @animate for (t, state) in zip(states.t, states)
-    print("t = ", t, '\r')
-    IBPM.plot_state(
-        problem, state, t, var=:omega,
-        xlims=(-4.0, 10.0), ylims=(-3.0, 3.0), clims=(-5.0, 5.0), clevs=40
-    )
+    # Save an animation frame
+    frame(anim)
 end
 
-gif(anim, "cyl_100.gif", fps=10)
+# Create callback to show progress
+show_progress = each_timestep() do state
+    @printf "\r%.2f%%" (100 * state.t / T)
+end
+
+# Solve the problem and update the animation
+solve(prob, (0.0, T); call=[save_anim, show_progress])
+
+# Save the animation to disk
+gif(anim, "$(@__DIR__)/cyl_100.gif")

@@ -1,30 +1,32 @@
 """
-Support for constructing basic bodies:
-    * Flat 1D plate
-    * Circular cylinder
-    * 4-digit NACA airfoils
+Support for constructing basic bodies.
 """
+module Bodies
+
+using ..IBPM: RigidBody, Static
 
 """
-    make_plate(L, α, h, x0, y0; motion=Static(), n=0)
+    plate((x, y), L, θ, n::Integer;       motion=Static())
+    plate((x, y), L, θ, h::AbstractFloat; motion=Static())
 
-Build plate of length L at AoA α based on grid spacing of h.
+Return a [`RigidBody`](@ref) in the shape of a flat plate.
 
-If n = 0, choose so that ds=2h.  Also note that α here is different from
-the free-stream flux definition, i.e. you can either incline the plate or change
-the angle of the free-stream flow (but you probably don't want to do both)
+# Arguments
+- `(x, y)`: Center of the plate.
+- `L`: Length of the plate.
+- `θ`: Counter-clockwise angle of the plate with the x axis.
+- `n::Integer``: If provided, use this amount of points in the body.
+- `h::AbstractFloat`: If provided, make the point spacing about `2h`.
+    `h` is typically the grid step.
+- `motion=Static()`: The [`Motion`](@ref) type of the body.
 """
-function make_plate(L, α, h, x0, y0; motion=Static(), n=0)
-    # Get # of points such that ds = 2h
-    if (n==0)
-        n = Int( floor( L / h / 2 ) ) + 1;
-    end
+function plate((x, y)::NTuple{2}, L, θ, n::Integer; motion=Static())
 
     spt = L.*(0:(n-1))/(n-1);  # Range (0, L)
-    xhat = spt*cos.(-α);
-    yhat = spt*sin.(-α);
+    xhat = spt*cos.(θ);
+    yhat = spt*sin.(θ);
 
-    xb = [xhat.+x0  yhat.+y0];
+    xb = [xhat.+x  yhat.+y];
 
     # sanity check: make sure ds is equal to 2 * h
     ds = sqrt( (xhat[2] - xhat[1])^2 + (yhat[2] - yhat[1])^2 ) ;
@@ -32,31 +34,32 @@ function make_plate(L, α, h, x0, y0; motion=Static(), n=0)
     return RigidBody(motion, xb, copy(xb), 0.0*xb, fill(ds, n))
 end
 
+function plate(xy, L, θ, h::AbstractFloat; kw...)
+    n = floor(Int, L / h / 2) + 1
+    return plate(xy, L, θ, n; kw...)
+end
+
 """
-    make_cylinder(r, h, x0, y0; motion=Static(), n=0)
+    cylinder((x, y), r, n::Integer;       motion=Static())
+    cylinder((x, y), r, h::AbstractFloat; motion=Static())
 
-Build cylinder of radius r based on grid spacing of h.
+Return a [`RigidBody`](@ref) in the shape of a cylinder.
 
-If n \neq 0, choose so that ds=2h.
+# Arguments
+- `(x, y)`: Center of the cylinder.
+- `r`: Radius of the cylinder.
+- `n::Integer``: If provided, use this amount of points in the body.
+- `h::AbstractFloat`: If provided, make the point spacing about `2h`.
+    `h` is typically the grid step.
+- `motion=Static()`: The [`Motion`](@ref) type of the body.
 """
-function make_cylinder(r, h, x0, y0; motion=Static(), n=0)
-    circum = 2 * π * r; #  Circumference of the circle
-
-    if ismissing(h)==true
-        h = 2.0/Re #default to a grid Re of 2
-    end
-
-    # Get # of points such that ds = 2h
-    if (n==0)
-        n = Int( floor( circum / h / 2 ) );
-    end
-
+function cylinder((x, y)::NTuple{2}, r, n::Integer; motion=Static())
     int =  2*π/n ;
     spt = 0:int:(n-1)*int;
     xhat = r.*cos.(spt);
     yhat = r.*sin.(spt);
 
-    xb = [xhat.+x0  yhat.+y0];
+    xb = [xhat.+x  yhat.+y];
 
     # sanity check: make sure ds is equal to 2 * h
     ds = sqrt( (xhat[2] - xhat[1])^2 + (yhat[2] - yhat[1])^2 ) ;
@@ -64,18 +67,25 @@ function make_cylinder(r, h, x0, y0; motion=Static(), n=0)
     return RigidBody(motion, xb, copy(xb), 0.0*xb, fill(ds, n))
 end
 
+function cylinder(xy, r, h::AbstractFloat; kw...)
+    circum = 2 * π * r #  Circumference of the circle
+    n = floor(Int, circum / h / 2)
+    return cylinder(xy, r, n; kw...)
+end
+
 """
-    make_naca(x0, N, spec; motion=Static())
+    naca_airfoil(x0, N, spec; motion=Static())
 
 Generate 4-digit NACA airfoil based on string `spec`.
 """
-function make_naca(x0, N, spec; motion=Static())
+function naca_airfoil(x0, N, spec; motion=Static())
+    # TODO: Improve documentation
 
     # Define x-locations
     dθ = π/(N-1)
 
     x = 0.5.*(1 .+ cos.(dθ.*(0:N-1)))
-    _, xU, xL, yU, yL = naca(x, spec);
+    _, xU, xL, yU, yL = naca_points(x, spec);
 
     # Edge points of "panels"
     xe = zeros(2*N-1, 2)
@@ -95,13 +105,13 @@ function make_naca(x0, N, spec; motion=Static())
 end
 
 """
-    naca(x, spec)
+    naca_points(x, spec)
 
 Compute points on 4-digit NACA airfoils
 
 x - x/c, so that x ∈ (0, 1)
 """
-function naca(x, spec)
+function naca_points(x, spec)
     # First, break down spec
     m = parse(Int, spec[1])/100.    # Maximum camber
     p = parse(Int, spec[2])/10.     # Location of max. camber
@@ -138,6 +148,9 @@ end
 
 Function naca(x, t) for points on symmetric 4-digit airfoils
 """
-function sym_naca(x, spec)
-    sym_naca(x, t) = 5*t*(0.2969*sqrt(x) - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1036*x^4 );
-end
+# TODO: Fix this
+# function sym_naca(x, spec)
+#     sym_naca(x, t) = 5*t*(0.2969*sqrt(x) - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1036*x^4 );
+# end
+
+end # module

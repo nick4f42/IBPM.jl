@@ -63,6 +63,8 @@ function advance!(state::IBState,
     # Interpolate values from finer grid to center region of coarse grid
     vort2flux!( state.ψ, state.q, state.Γ, prob.model, grid.mg );
 
+    state.t = t
+
     return nothing
 end
 

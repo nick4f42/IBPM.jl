@@ -1,8 +1,8 @@
 module IBPM
 
 export IBProblem, MultiGrid
-export InterpNone, InterpQuadratic
-export StateCallback, StateData, solve, solve!
+export solve, solve!, each_timestep, at_times, at_indices
+export fluidplot, fluidplot!, bodyplot, bodyplot!
 
 using LinearAlgebra
 using SparseArrays

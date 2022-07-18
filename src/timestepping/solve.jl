@@ -1,329 +1,240 @@
 """
-    gridstep(problem::AbstractIBProblem)
-    gridstep(grid::Grid)
+    StopIteration
 
-The minimum grid step size of a problem or grid.
+Sentinel returned by a [`StateCallback`](@ref) that indicates that [`solve`](@ref) should terminate.
 """
-function gridstep end
-
-"""
-    timestep(problem::AbstractIBProblem)
-
-The time step size of a problem.
-"""
-function timestep end
-
+struct StopIteration end
 
 """
-    InterpKind
+    Timesteps
 
-Used to control how [`StateData`](@ref) does or doesn't interpolate data.
-
-Currently, the following kinds are supported:
-- [`InterpNone`](@ref)
-- [`InterpQuadratic`](@ref)
+Specifies certain timesteps during a simulation.
 """
-abstract type InterpKind end
+abstract type Timesteps end
 
 """
-    InterpNone <: InterpKind
+    AllTimesteps() :: Timesteps
 
-Do not interpolate. Use the nearest time and state.
+Specifies all the timesteps during a simulation.
 """
-struct InterpNone <: InterpKind end
-
-"""
-    InterpQuadratic <: InterpKind
-
-Quadratically interpolate between states.
-"""
-struct InterpQuadratic <: InterpKind end
-
+struct AllTimesteps <: Timesteps end
 
 """
-    StateCallback(f::Function, problem::IBProblem; at::AbstractVector)
+    TimestepIndices(i) :: Timesteps
 
-In [`solve`](@ref), call `f(t, state)` each time step in `at` where `t` and `state` are the
-time and [`IBState`](@ref).
-
-If `at` is a vector of floats, `f` is called at the nearest time steps. If it is a vector
-of integers, `f` is called at each i'th time step.
-
----
-
-    StateCallback(
-        f::Function,
-        problem::IBProblem,
-        quantities::Function...;
-        at::AbstractVector,
-        interp::InterpKind = InterpNone()
-    )
-
-In [`solve`](@ref), call `f(t, q...)` with the time and return values from `quantities`.
-
-Each function in `quantities` must have only one method with a signature `(state,)` or `(t,
-state)`. Each function must not return a view of `state` unless `interp` is `InterpNone`.
-
-If `interp` is not `InterpNone`, the return value of each `quantity` is interpolated to
-approximate the values between time steps. The return value must either be a number or
-define broadcasted arithmetic operators (`.+`, `.*`, etc).
-
-The [`IBPM.Quantities`](@ref) module defines helpful functions that may be passed as
-`quantity`.
+Specifies certain timestep indices during a simulation.
 """
-struct StateCallback
-    callback::Function
-    function StateCallback(
-        f::Function,
-        problem::IBProblem,
-        quantities::Function...;
-        at::AbstractVector,
-        interp::InterpKind = InterpNone()
-    )
-        qty_funcs = map(quantities) do qty
-            nargs = _infer_nargs(qty)
-            if nargs == 1
-                (_, state) -> qty(state)
-            elseif nargs == 2
-                qty
-            else
-                throw(ArgumentError(
-                    "quantity function must have signature (state,) or (t, state)"
-                ))
-            end
+struct TimestepIndices{X} <: Timesteps
+    i::X
+end
+
+"""
+    TimestepTimes(t) :: Timesteps
+
+Specifies certain times during a simulation.
+"""
+struct TimestepTimes{X} <: Timesteps
+    t::X
+end
+
+"""
+    StateCallback(f, timesteps::Timesteps, ret::Type=Any)
+
+Specifies a callback `f(state)` that should be run at the given `timesteps`.
+
+It is recommended to use [`each_timestep`](@ref), [`at_times`](@ref), or
+[`at_indices`](@ref) to construct this type. The return type of `f` can be specified with
+`ret`. The value of `ret` determines the type of [`StateResult`](@ref) that a callback is
+mapped to.
+
+Can be passed to [`solve`](@ref) to specify callbacks and results.
+"""
+struct StateCallback{T<:Timesteps,F,R}
+    f::F
+    timesteps::T
+    ret::Type{R} # return type of f
+end
+
+StateCallback(f, timesteps) = StateCallback(f, timesteps, Any)
+
+"""
+    each_timestep(f, [ret]) :: StateCallback
+
+Return a [`StateCallback`](@ref) that runs `f(state)` at each timestep.
+
+`ret` specifies the return type of `f`.
+
+See also [`at_times`](@ref), [`at_indices`](@ref).
+"""
+each_timestep(f, args...) = StateCallback(f, AllTimesteps(), args...)
+
+"""
+    at_times(f, t, [ret]) :: StateCallback
+
+Return a [`StateCallback`](@ref) that runs `f(state)` at each time in `t`.
+
+`ret` specifies the return type of `f`.
+
+See also [`each_timestep`](@ref), [`at_indices`](@ref).
+"""
+at_times(f, t, args...) = StateCallback(f, TimestepTimes(t), args...)
+
+"""
+    at_indices(f, i, [ret]) :: StateCallback
+
+Return a [`StateCallback`](@ref) that runs `f(state)` at the n'th timestep for each n in `i`.
+
+`ret` specifies the return type of `f`.
+
+See also [`each_timestep`](@ref), [`at_times`](@ref).
+"""
+at_indices(f, i, args...) = StateCallback(f, TimestepIndices(i), args...)
+
+# Estimate how many timesteps a StateCallback will save
+_timestep_count(prob, cb::StateCallback) = _timestep_count(prob, cb.timesteps)
+_timestep_count(prob::IBProblem, ::AllTimesteps) = length(prob.t)
+
+function _timestep_count(_, t::TimestepIndices{X}) where {X}
+    return Base.IteratorSize(X) == Base.HasLength() ? length(t.i) : missing
+end
+
+function _timestep_count(_, t::TimestepTimes{X}) where {X}
+    return Base.IteratorSize(X) == Base.HasLength() ? length(t.t) : missing
+end
+
+# Return a function that runs every iteration, only calling the callback when it should
+_callback_caller(_, cb::StateCallback{<:AllTimesteps}) = (_, state) -> cb.f(state)
+
+function _callback_caller(_, cb::StateCallback{<:TimestepIndices})
+    index_iter = Iterators.Stateful(cb.timesteps.i)
+
+    return function (i, state)
+        if !isempty(index_iter) && peek(index_iter) == i
+            popfirst!(index_iter)
+            return cb.f(state)
         end
 
-        times = _interp_times(problem, at, interp)
-        return new(_state_callback(f, qty_funcs, times, problem, interp))
+        return nothing
     end
 end
 
-function StateCallback(f::Function, problem::IBProblem; at::AbstractVector)
-    return StateCallback(f, problem, identity; at, interp=InterpNone())
-end
+function _callback_caller(prob::IBProblem, cb::StateCallback{<:TimestepTimes})
+    time_iter = Iterators.Stateful(cb.timesteps.t)
+    half_dt = timestep(prob) / 2
 
-function _infer_nargs(quantity::Function)
-    method_iter = Iterators.flatten((
-        methods(quantity, (IBState,)),
-        methods(quantity, (AbstractFloat, IBState))
-    ))
-    nargs = Iterators.map(m -> m.nargs-1, method_iter)
-
-    isempty(nargs) && return nothing
-    n = first(nargs)
-    return all(==(n), nargs) ? n : nothing
-end
-
-
-function _state_callback(
-    f::Function, quantities, times::AbstractVector{Float64},
-    ::IBProblem, ::InterpNone
-)
-    t_interp = Iterators.Stateful(times)
-
-    return function (t, state)
-        if peek(t_interp) == t
-            popfirst!(t_interp)
-            vals = map(qty -> qty(t, state), quantities)
-            f(t, vals...)
+    return function (_, state)
+        call = false
+        while !isempty(time_iter) && peek(time_iter) < state.t + half_dt
+            popfirst!(time_iter)
+            call = true
         end
-        nothing
+
+        return call ? cb.f(state) : nothing
     end
 end
 
-function _state_callback(
-    f::Function, quantities, times::AbstractVector{Float64},
-    problem::IBProblem, ::InterpQuadratic
-)
-    t_interp = Iterators.Stateful(times)
-    t_sim = problem.t
-    dt = step(t_sim)
+"""
+    StateResult{T} <: AbstractVector{T}
 
-    cache = []
+The congregated results from a [`StateCallback`](@ref). `T` is determined by the `ret`
+argument to [`StateCalllback`](@ref).
 
-    i = 0
-    return function (t0, state)
-        isempty(t_interp) && return
-
-        i += 1
-        t = peek(t_interp)
-        t2 = t_sim[min(i+2, length(t_sim))]
-
-        t > t2 && return
-
-        current = map(qty -> qty(t0, state), quantities)
-
-        if t > t0 || i < 3
-            push!(cache, current)
-            return
-        end
-
-        while true
-            x = (t - t0) / dt
-            vals = map(cache..., current) do y...
-                _quadratic_interp(y, x)
-            end
-            f(t, vals...)
-
-            popfirst!(t_interp)
-            isempty(t_interp) && return
-            t = peek(t_interp)
-            t > t0 && break
-        end
-
-        popfirst!(cache)
-        t ≤ t2 && push!(cache, current)
-    end
-end
-
-function _quadratic_interp end
-
-let interp_expr = :(
-    x * (x + 1) / 2 * a
-    - x * (x + 2) * b
-    + (x + 1) * (x + 2) / 2 * c
-)
-    function _factory(T, expr)
-        # Quadratically interpolate values a, b, c at x.
-        # a, b, c are at x values -2, -1, and 0 respectively.
-        @eval function _quadratic_interp((a, b, c)::NTuple{3,$T}, x)
-            return $expr
-        end
-    end
-
-    _factory(Number, interp_expr)
-    _factory(Any, :(@. $interp_expr))
-end
-
-function _interp_times(
-        problem::IBProblem,
-        times::AbstractVector{<:Integer},
-        ::InterpKind
-    )
-    return problem.t[times]
-end
-
-function _interp_times(
-        problem::IBProblem,
-        times::AbstractVector{<:AbstractFloat},
-        ::InterpNone
-    )
-    return _nearest_values(problem.t, times)
-end
-
-function _interp_times(
-        problem::IBProblem,
-        times::AbstractVector{<:AbstractFloat},
-        ::InterpKind
-    )
-    if first(times) < problem.t[1] || last(times) > problem.t[end]
-        throw(DomainError(times, "times must be within the problem's time span"))
-    end
-    return times
-end
-
-function _nearest_values(a::AbstractVector{T}, b::AbstractVector{T}) where T
-    # Returns a vector of unique closest values in `a` to values in `b`.
-    # Assumes `a` and `b` are sorted.
-
-    vals = T[]
-    isempty(a) && return vals
-
-    b_iter = Iterators.Stateful(b)
-
-    for (x1, x2) in zip(a, Iterators.drop(a, 1))
-        isempty(b_iter) && break
-
-        y = peek(b_iter)
-        y - x1 < x2 - y || continue
-
-        push!(vals, x1)
-        popfirst!(b_iter)
-        while !isempty(b_iter) && (y = peek(b_iter); y - x1 < x2 - y)
-            popfirst!(b_iter)
-        end
-    end
-
-    isempty(b_iter) || push!(vals, last(a))
-
-    return vals
-end
-
-struct StateData{T, V<:AbstractVector} <: AbstractVector{T}
-    quantity::Function
-    problem::IBProblem
-    interp::InterpKind
+The `t` field stores the time corresponding to each data entry. `result[i]` was taken at
+simulation time `result.t[i]`.
+"""
+struct StateResult{T} <: AbstractVector{T}
     data::Vector{T}
-    t::V
-
-    function StateData{T}(
-        quantity::Function, problem::IBProblem;
-        saveat::AbstractVector, interp::InterpKind=InterpNone()
-    ) where T
-        times = _interp_times(problem, saveat, interp)
-        data = sizehint!(T[], length(times))
-
-        return new{T, typeof(times)}(quantity, problem, interp, data, times)
-    end
+    t::Vector{Float64}
 end
 
-Base.size(s::StateData) = size(s.data)
-Base.getindex(s::StateData, i::Int) = s.data[i]
-Base.IndexStyle(::StateData) = IndexLinear()
-
-function saveto!(s::StateData)
-    return StateCallback(s.problem, s.quantity; at=s.t, interp=s.interp) do _, qty
-        push!(s.data, qty)
-    end
+Base.size(r::StateResult) = size(r.data)
+Base.getindex(r::StateResult, i) = r.data[i]
+Base.IndexStyle(::Type{StateResult}) = IndexLinear()
+function Base.sizehint!(r::StateResult, n)
+    sizehint!(r.data, n)
+    sizehint!(r.t, n)
+    return r
 end
 
+function _init_result(prob::IBProblem, cb::StateCallback)
+    result =  StateResult(cb.ret[], Float64[])
 
-function solve!(f::Function, state::IBState, problem::IBProblem)
-    for t in problem.t
+    # TODO: Allow user to specify whether result is size hinted?
+    n = _timestep_count(prob, cb)
+    !ismissing(n) && sizehint!(result, n)
+
+    return result
+end
+
+function _result_pusher!(result::StateResult, prob::IBProblem, cb::StateCallback)
+
+    function pusher(state)
+        u = cb.f(state)
+        if !isnothing(u)
+            push!(result.data, something(u))
+            push!(result.t, state.t)
+        end
+        return nothing
+    end
+
+    return _callback_caller(prob, StateCallback(pusher, cb.timesteps))
+end
+
+"""
+    solve!(state, problem, (t0, tf); [save], [call]) -> results
+
+Solve `problem` between times `t0` and `tf` by overwriting `state` each iteration.
+
+See also [`solve`](@ref).
+"""
+function solve!(state::IBState, problem::IBProblem, (t0, tf); save=(), call=())
+    callers = map(cb -> _callback_caller(problem, cb), call)
+    results = map(cb -> _init_result(problem, cb), save)
+    pushers = map((cb, r) -> _result_pusher!(r, problem, cb), save, results)
+
+    for (i, t) in enumerate(t0:timestep(problem):tf)
         advance!(state, problem, t)
 
-        if !all(isfinite, state.CL)
-            @error "Lift coefficient is isfinite, terminating loop."
-            break
+        # Push results
+        for p in pushers
+            p(i, state)
         end
 
-        f(t, state) === false && break
-    end
-
-    return state
-end
-
-function solve!(f, state, problem, callbacks::AbstractVector{StateCallback})
-    return solve!(state, problem) do t, state
-        for cb in callbacks
-            cb.callback(t, state)
+        # Break if any callback returns StopIteration(), but call the remaining callbacks
+        stop = false
+        for f in callers
+            stop |= f(i, state) == StopIteration()
         end
-
-        f(t, state)
+        stop && break
     end
+
+    return results
 end
 
-solve!(args...) = solve!((_,_)->nothing, args...)
+"""
+    solve(problem, (t0, tf); [save], [call]) -> results
 
-function solve(f::Function, problem::IBProblem, args...)
-    return solve!(f, IBState(problem), problem, args...)
-end
+Solve `problem` between times `t0` and `tf`, optionally saving or executing callbacks.
 
-function solve(problem::IBProblem, args...)
-    return solve!(IBState(problem), problem, args...)
-end
+# Arguments
+- `problem::IBProblem`: The problem specification.
+- `(t0, tf)`: Initial and final times.
+- `save`: Collection of [`StateCallback`](@ref) that maps to `results` (default is empty).
+- `call`: Collection of [`StateCallback`](@ref) to be executed during the simulation.
 
+# Returns
+The result of mapping each callback in `save` to a [`StateResult`](@ref) using `map`.
+"""
+solve(problem, tlims; kw...) = solve!(IBState(problem), problem, tlims; kw...)
 
 """
     compute_cfl(state, prob)
 
-Compute the CFL number (uΔt/Δx) based on the fine-grid flux
-
-Note that this uses working memory that is also used in `nonlinear!`
+Compute the CFL number (uΔt/Δx) based on the fine-grid flux.
 """
 function compute_cfl(state, prob)
-    Δt, Δx = prob.scheme.dt, prob.model.grid.h
-    qwork = prob.model.work.q5
-    @views @. qwork = abs( state.q[:, 1] )
-    return maximum(qwork)*Δt/Δx
+    Δt = timestep(prob)
+    Δx = gridstep(prob)
+    q = view(state.q, :, 1)
+    return maximum(abs, q) * Δt / Δx
 end

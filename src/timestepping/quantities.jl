@@ -1,375 +1,398 @@
+"""
+    IBPM.Quantities
+
+Types for various quantities and methods to retrieve those quantities from a state.
+
+The [`Quantity`](@ref) type is the supertype of all quantities.
+"""
 module Quantities
 
-using IdentityRanges
-using ..IBPM: IBState, IBProblem, MultiGrid
+using Interpolations
+using StaticArrays
 
-export PreferView, AlwaysCopy
-export gridranges
+include("dynamics.jl")
+using .Dynamics2D
+using ..IBPM: IBState, IBProblem, AbstractIBProblem, MultiGrid, grid_of
 
+export DynamicsScalar, DynamicsVector
+export grid_basis, grid_origin, grid_frame, lab_basis, lab_origin, lab_frame
 
-"""
-    CopyPreference
+export Quantity, BodyQuantity, DomainVector, DomainScalar, gridranges
+export Dense, Discrete
+export StreamFunction, Vorticity, Velocity, VelocityX, VelocityY, VelocityNorm,
+    CFL, Slip, SurfaceStress, BodyImpulse, BodyPoints, DragCoef, LiftCoef
 
-Whether to return a view or copy of a quantity. Can be one of:
-- [`PreferView`](@ref)
-- [`AlwaysCopy`](@ref)
-"""
-abstract type CopyPreference end
-
-"""
-    PreferView <: CopyPreference
-
-Return a view to a state's quantity if possible.
-"""
-struct PreferView <: CopyPreference end
-
-"""
-    AlwaysCopy <: CopyPreference
-
-Never return a view to a state's quantity.
-"""
-struct AlwaysCopy <: CopyPreference end
-
-
-"""
-    surface_stress(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function surface_stress end
-
-"""
-    body_impulse(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function body_impulse end
-
-"""
-    drag_coef(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function drag_coef end
-
-"""
-    lift_coef(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function lift_coef end
-
-"""
-    cfl(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function cfl end
-
-"""
-    slip(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function slip end
-
-"""
-    body_points(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function body_points end
-
-"""
-    streamfunction(state, [copy])
-
-See [`Quantity`](@ref).
-"""
-function streamfunction end
-
-"""
-    vorticity(state, [copy]; [subgrids])
-
-See [`Quantity`](@ref).
-"""
-function vorticity end
-
-"""
-    x_velocity(state, [copy]; [subgrids])
-
-See [`Quantity`](@ref).
-"""
-function x_velocity end
-
-"""
-    y_velocity(state, [copy]; [subgrids])
-
-See [`Quantity`](@ref).
-"""
-function y_velocity end
-
-
-"""
-    quantities
-
-A tuple of all supported quantity functions.
-"""
-const quantities = (
-    :surface_stress,
-    :body_impulse,
-    :drag_coef,
-    :lift_coef,
-    :cfl,
-    :slip,
-    :body_points,
-    :streamfunction,
-    :vorticity,
-    :x_velocity,
-    :y_velocity,
-)
-
-"""
-    Quantity
-
-Type of all quantity functions. Every `quantity` has the following signature:
-
-    quantity(state::IBState, copy=AlwaysCopy(); ...)
-
-`copy` is a [`CopyPreference`](@ref) that specifies whether to prefer views or always
-copy. By default, a copy is always made.
-
----
-
-Quantities that apply to each subdomain have the following signature:
-
-    quantity(state, [copy]; [subgrids], ...) -> q::OffsetArray
-
-`subgrids` specifies the subdomains to return the quantities over. The last dimension of the
-returned array specifies the subdomain such that `q[..., i]` is the quantity on the `i`'th
-grid.
-
----
-
-The following quantities are supported:
-
-$(join(("[`$q`](@ref)" for q in quantities), ", ")).
-"""
-const Quantity = Union{map(typeof ∘ eval, quantities)...}
-
-
-"""
-    gridranges(quantity::Quantity, problem::IBProblem; [subgrids]) -> r
-
-The grid ranges `(x, y)` that correspond to the return value of `quantity` for each
-subdomain in `subgrids`.
-
-For each subdomain `k` in `subgrids`, the value at `quantity(...)[i,j,k]` has the coordinate
-`(x, y) = (r[k][i], r[k][j])`.
-"""
-function gridranges(quantity, problem::IBProblem; kwargs...)
-    return gridranges(quantity, problem.model.grid; kwargs...)
+cross2d((x1, y1), (x2, y2)) = x1 * y2 - y1 * x2
+rot90((x, y)) = SVector(-y, x)
+function rot((x, y), θ)
+    c = cos(θ)
+    s = sin(θ)
+    return SVector(c * x - s * y, s * x + c * y)
 end
 
-const IndexRange = AbstractUnitRange{<:Integer}
-
-
-for (name, field) in (
-    (:surface_stress, :fb),
-    (:body_impulse, :F̃b),
-    (:drag_coef, :CD),
-    (:lift_coef, :CL),
-    (:cfl, :cfl),
-    (:slip, :slip),
-    (:body_points, :xb),
-)
-    @eval $name(state::IBState, ::PreferView) = state.$field
+abstract type DomainKind end
+struct Discrete <: DomainKind end
+struct Dense{T} <: DomainKind
+    interp::T
 end
 
+abstract type Quantity end
+abstract type BodyQuantity <: Quantity end
+abstract type DomainVector{N} <: Quantity end
+const DomainScalar = DomainVector{1}
 
-function vorticity(
-    state::IBState, ::AlwaysCopy; subgrids::IndexRange=1:state.grid[].mg
+struct StreamFunction <: DomainScalar end
+struct Vorticity <: DomainScalar end
+struct Velocity <: DomainScalar end
+struct VelocityX <: DomainScalar end
+struct VelocityY <: DomainScalar end
+struct VelocityNorm <: DomainVector{2} end
+
+struct CFL <: Quantity end
+struct Slip <: Quantity end
+
+struct SurfaceStress <: BodyQuantity end
+struct BodyImpulse <: BodyQuantity end
+struct BodyPoints <: BodyQuantity end
+struct DragCoef <: BodyQuantity end
+struct LiftCoef <: BodyQuantity end
+
+(T::Type{<:Quantity})(args...; kw...) = T()(args...; kw...)
+
+for (Qty, field) in (
+    (:CFL, :cfl),
+    (:Slip, :slip),
 )
-    grid = state.grid[]
-
-    Γ = reshape(state.Γ, grid.nx-1, grid.ny-1, :)
-
-    ω = Γ[:, :, IdentityRange(subgrids)]
-    for i in subgrids
-        δ = grid.h * 2.0 ^ (i - 1)
-        ω[:, :, i] ./= δ^2
-    end
-
-    return ω
+    @eval (::$Qty)(::IBProblem) = state::IBState -> state.$field
 end
 
-function gridranges(
-    ::typeof(vorticity), grid::MultiGrid; subgrids::IndexRange=1:grid.mg
+for (Qty, field) in (
+    (:SurfaceStress, :fb),
+    (:BodyImpulse, :F̃b),
+    (:BodyPoints, :xb),
+    (:DragCoef, :CD),
+    (:LiftCoef, :CL),
 )
+    @eval (::$Qty)(::IBProblem, bodies=(:)) = state::IBState -> state.$field[bodies]
+end
+
+default_dense_kind(::IBProblem) = (Dense ∘ BSpline ∘ Linear)()
+
+function (qty::DomainVector)(
+    prob::AbstractIBProblem;
+    kind::DomainKind=default_dense_kind(prob),
+    frame::AbstractFrame=GridFrame(),
+    kw...
+)
+    return qty(prob, kind, frame; kw...)
+end
+
+function (::StreamFunction)(
+    prob::IBProblem, ::Discrete, ::GridFrame;
+    subgrids=1:grid_of(prob).mg
+)
+    grid = grid_of(prob)
+    return state::IBState -> reshape(state.ψ, grid.nx - 1, grid.ny - 1, :)[:, :, subgrids]
+end
+
+function (q::StreamFunction)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
+    return _interp_quantity(q, prob, d; kw...)
+end
+
+function gridranges(grid::MultiGrid, ::StreamFunction; subgrids=1:grid.mg)
     h = grid.h
     len = grid.len
 
-    return map(IdentityRange(subgrids)) do i
-        fac = 2.0 ^ (i - 1)
+    return map(subgrids) do i
+        fac = 2.0^(i - 1)
         δ = h * fac
         xlen = len * fac
 
         ylen = xlen * (grid.ny / grid.nx)
-        offx = fac * len/2.0 - len/2.0 + grid.offx
-        offy = fac * (grid.ny*h)/2.0 - (grid.ny*h)/2.0 + grid.offy
+        offx = fac * len / 2.0 - len / 2.0 + grid.offx
+        offy = fac * (grid.ny * h) / 2.0 - (grid.ny * h) / 2.0 + grid.offy
 
-        x = range(-offx+δ, xlen-offx-δ, length=grid.nx-1)
-        y = range(-offy+δ, ylen-offy-δ, length=grid.ny-1)
+        xs = range(-offx + δ, xlen - offx - δ, length=grid.nx - 1)
+        ys = range(-offy + δ, ylen - offy - δ, length=grid.ny - 1)
 
-        (x, y)
+        (xs, ys)
     end
 end
 
-
-function streamfunction(
-    state::IBState, ::PreferView; subgrids::IndexRange=1:state.grid[].mg
+function (::Vorticity)(
+    prob::IBProblem, ::Discrete, ::GridFrame;
+    subgrids=1:grid_of(prob).mg
 )
-    grid = state.grid[]
-    ψ = reshape(state.ψ, grid.nx-1, grid.ny-1, :)
-    return @view ψ[:, :, IdentityRange(subgrids)]
+    grid = grid_of(prob)
+
+    return function (state::IBState)
+        ω = reshape(state.Γ, grid.nx - 1, grid.ny - 1, :)[:, :, subgrids]
+        for (i, subgrid) in zip(axes(ω, 3), subgrids)
+            δ = grid.h * 2.0^(subgrid - 1)
+            ω[:, :, i] ./= δ^2
+        end
+
+        return ω
+    end
 end
 
-function gridranges(
-    ::typeof(streamfunction), grid::MultiGrid; subgrids::IndexRange=1:grid.mg
-)
+function (q::Vorticity)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
+    return _interp_quantity(q, prob, d; kw...)
+end
+
+function gridranges(grid::MultiGrid, ::Vorticity; subgrids=1:grid.mg)
     h = grid.h
     len = grid.len
 
-    return map(IdentityRange(subgrids)) do i
-        fac = 2.0 ^ (i - 1)
+    return map(subgrids) do i
+        fac = 2.0^(i - 1)
         δ = h * fac
         xlen = len * fac
 
         ylen = xlen * (grid.ny / grid.nx)
-        offx = fac * len/2.0 - len/2.0 + grid.offx
-        offy = fac * (grid.ny*h)/2.0 - (grid.ny*h)/2.0 + grid.offy
+        offx = fac * len / 2.0 - len / 2.0 + grid.offx
+        offy = fac * (grid.ny * h) / 2.0 - (grid.ny * h) / 2.0 + grid.offy
 
-        x = range(-offx+δ, xlen-offx-δ, length=grid.nx-1)
-        y = range(-offy+δ, ylen-offy-δ, length=grid.ny-1)
+        xs = range(-offx + δ, xlen - offx - δ, length=grid.nx - 1)
+        ys = range(-offy + δ, ylen - offy - δ, length=grid.ny - 1)
 
-        (x, y)
+        (xs, ys)
     end
 end
 
-function x_velocity(
-    state::IBState, ::AlwaysCopy; subgrids::IndexRange=1:state.grid[].mg
+function (::VelocityX)(
+    prob::IBProblem, ::Discrete, ::GridFrame;
+    subgrids=1:grid_of(prob).mg
 )
-    grid = state.grid[]
+    grid = grid_of(prob)
     nu = grid.ny * (grid.nx + 1)
 
-    u = sum((state.q, state.q0)) do x
-        @views reshape(
-            x[1:nu, :], grid.nx+1, grid.ny, :
-        )[:, :, IdentityRange(subgrids)]
+    return function (state::IBState)
+        u = sum((state.q, state.q0)) do x
+            @views reshape(x[1:nu, :], grid.nx + 1, grid.ny, :)[:, :, subgrids]
+        end
+
+        for (i, subgrid) in zip(axes(u, 3), subgrids)
+            δ = grid.h * 2.0^(subgrid - 1)
+            u[:, :, i] ./= δ
+        end
+
+        # TODO: For some reason the top left velocity on grid 1 is erroneous.
+
+        # (Nick) The erroneous velocity was cropped out in plotting-utils.jl, see:
+        # https://github.com/NUFgroup/IBPM.jl/blob/aca48b50c9ca92d24dab5659edaf7196d1328f63/src/plotting/plotting-utils.jl#L146-L152
+        # It won't be cropped out here since it messes with the `gridranges` function
+        #return @view u[2:end-1, 2:end-1, axes(u)[3:end]...]
+
+        return u
     end
-
-    for i in subgrids
-        δ = grid.h * 2.0 ^ (i - 1)
-        u[:, :, i] ./= δ
-    end
-
-    # TODO: For some reason the top left velocity on grid 1 is erroneous.
-    # The erroneous velocity was cropped out in plotting-utils.jl, but I'm keeping it in
-    # here for now. Cropping it out would require changing the corresponding `gridranges`.
-
-    return u
 end
 
-function gridranges(
-    ::typeof(x_velocity), grid::MultiGrid; subgrids::IndexRange=1:grid.mg
-)
-    nx, ny = grid.nx, grid.ny
+function (q::VelocityX)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
+    return _interp_quantity(q, prob, d; kw...)
+end
 
+function gridranges(grid::MultiGrid, ::VelocityX; subgrids=1:grid.mg)
     h = grid.h
     len = grid.len
 
-    return map(IdentityRange(subgrids)) do i
-        fac = 2.0 ^ (i - 1)
+    return map(subgrids) do i
+        fac = 2.0^(i - 1)
         δ = h * fac
         xlen = len * fac
 
         ylen = xlen * (grid.ny / grid.nx)
-        offx = fac * len/2.0 - len/2.0 + grid.offx
-        offy = fac * (grid.ny*h)/2.0 - (grid.ny*h)/2.0 + grid.offy
+        offx = fac * len / 2.0 - len / 2.0 + grid.offx
+        offy = fac * (grid.ny * h) / 2.0 - (grid.ny * h) / 2.0 + grid.offy
 
-        x = range(-offx, xlen-offx, length=grid.nx+1)
-        y = range(-offy+δ/2.0, ylen-offy-δ/2.0, length=grid.ny)
+        x = range(-offx, xlen - offx, length=grid.nx + 1)
+        y = range(-offy + δ / 2.0, ylen - offy - δ / 2.0, length=grid.ny)
 
         (x, y)
     end
 end
 
 
-function y_velocity(
-    state::IBState, ::AlwaysCopy; subgrids::IndexRange=1:state.grid[].mg
+function (::VelocityY)(
+    prob::IBProblem, ::Discrete, ::GridFrame;
+    subgrids=1:grid_of(prob).mg
 )
-    grid = state.grid[]
+    grid = grid_of(prob)
     nu = grid.ny * (grid.nx + 1)
-    nv = grid.nx * (grid.ny + 1)
 
-    v = sum((state.q, state.q0)) do x
-        @views reshape(
-            x[nu.+(1:nv), :], grid.nx, grid.ny+1, :
-        )[:, :, IdentityRange(subgrids)]
+    return function (state::IBState)
+        v = sum((state.q, state.q0)) do x
+            @views reshape(x[nu+1:end, :], grid.nx, grid.ny + 1, :)[:, :, subgrids]
+        end
+
+        for (i, subgrid) in zip(axes(v, 3), subgrids)
+            δ = grid.h * 2.0^(subgrid - 1)
+            v[:, :, i] ./= δ
+        end
+
+        return v
     end
-
-    for i in subgrids
-        δ = grid.h * 2.0 ^ (i - 1)
-        v[:, :, i] ./= δ
-    end
-
-    return v
 end
 
-function gridranges(
-    ::typeof(y_velocity), grid::MultiGrid; subgrids::IndexRange=1:grid.mg
-)
-    nx, ny = grid.nx, grid.ny
+function (q::VelocityY)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
+    return _interp_quantity(q, prob, d; kw...)
+end
 
+function gridranges(grid::MultiGrid, ::VelocityY; subgrids=1:grid.mg)
     h = grid.h
     len = grid.len
 
-    return map(IdentityRange(subgrids)) do i
-        fac = 2.0 ^ (i - 1)
+    return map(subgrids) do i
+        fac = 2.0^(i - 1)
         δ = h * fac
         xlen = len * fac
 
         ylen = xlen * (grid.ny / grid.nx)
-        offx = fac * len/2.0 - len/2.0 + grid.offx
-        offy = fac * (grid.ny*h)/2.0 - (grid.ny*h)/2.0 + grid.offy
+        offx = fac * len / 2.0 - len / 2.0 + grid.offx
+        offy = fac * (grid.ny * h) / 2.0 - (grid.ny * h) / 2.0 + grid.offy
 
-        x = range(-offx+δ/2.0, xlen-offx-δ/2.0, length=grid.nx)
-        y = range(-offy, ylen-offy, length=grid.ny+1)
+        x = range(-offx + δ / 2.0, xlen - offx - δ / 2.0, length=grid.nx)
+        y = range(-offy, ylen - offy, length=grid.ny + 1)
 
         (x, y)
     end
 end
 
+function (::StreamFunction)(
+    prob::IBProblem, d::Dense, frame::Frame;
+    subgrids=1:grid_of(prob).mg
+)
+    ψ_grid = StreamFunction()(prob, d, GridFrame(); subgrids)
 
-for func in quantities
-    @eval begin
-        export $func
+    error("not implemented")
+    # rf =
+    # vf =
+    # θf =
+    # ωf =
 
-        # By default, make a copy of the quantity.
-        $func(state::IBState; kw...) = $func(state, AlwaysCopy(); kw...)
-    end
-
-    # Only one of the following needs to be defined for each quantity.
-    # The other has this default definition.
-    f = eval(func)
-    if !hasmethod(f, (IBState, PreferView))
-        @eval function $func(state::IBState, ::PreferView; kw...)
-            return $func(state, AlwaysCopy(); kw...)
+    return function (state::IBState)
+        t = state.t
+        ψ = ψ_grid(state)
+        return function (x, y)
+            r = SVector(x, y)
+            rg = rf(t) + rot(r, θf(t))
+            return ψ(rg...) - cross2d(vf(t) / 2 + ωf(t) * rot90(r) / 3, r)
         end
-    elseif !hasmethod(f, (IBState, AlwaysCopy))
-        @eval function $func(state::IBState, ::AlwaysCopy; kw...)
-            return $func(state, PreferView(); kw...) |> deepcopy
+    end
+end
+
+function (::Vorticity)(
+    prob::IBProblem, d::Dense, frame::Frame;
+    subgrids=1:grid_of(prob).mg
+)
+    vort_grid = Vorticity()(prob, d, GridFrame(); subgrids)
+
+    error("not implemented")
+    # rf =
+    # vf =
+    # θf =
+    # ωf =
+
+    return function (state::IBState)
+        t = state.t
+        vort = vort_grid(state)
+        return function (x, y)
+            r = SVector(x, y)
+            rg = rf(t) + rot(r, θf(t))
+            vort(rg...) - 2 * ωf(t)
         end
     end
+end
+
+function (q::Velocity)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
+    u = VelocityX()(prob, d, GridFrame(); kw...)
+    v = VelocityY()(prob, d, GridFrame(); kw...)
+    return state::IBState -> (x, y) -> SVector(u(state)(x, y), v(state)(x, y))
+end
+
+function (::Velocity)(
+    prob::IBProblem, d::Dense, frame::Frame;
+    subgrids=1:grid_of(prob).mg
+)
+    # fluid velocity in the grid frame
+    u_grid = Velocity()(prob, d, GridFrame(); subgrids)
+
+    error("not implemented")
+    # rf =
+    # vf =
+    # θf =
+    # ωf =
+
+    return function (state::IBState)
+        t = state.t
+        u = u_grid(state)
+        return function (x, y)
+            r = SVector(x, y)
+            rg = rf(t) + rot(r, θf(t))
+            ug = u(rg...)
+            return rot(ug, -θf(t)) - vf(t) - ωf(t) * rot90((x, y))
+        end
+    end
+end
+
+# Interpolates a quantity in the grid frame.
+function _interp_quantity(
+    qty::DomainVector{N}, prob::IBProblem, d::Dense; subgrids=1:grid_of(prob).mg
+) where {N}
+    subgrids = sort(subgrids)
+    ranges = gridranges(grid_of(prob), qty; subgrids)
+    f = qty(prob, Discrete(), GridFrame(); subgrids)
+
+    return function (state::IBState)
+        return _subdomain_interp!(f(state), ranges, d.interp, Val(N))
+    end
+end
+
+# Interpolation function for a scalar quantity
+# Overwrites `a`
+function _subdomain_interp!(a::AbstractArray, ranges, interp, ::Val{1})
+    # Interp function for each subdomain
+    funcs = map(eachslice(a; dims=3), ranges) do a_sub, (xs, ys)
+        itp = extrapolate(interpolate!(a_sub, interp), Flat())
+        scale(itp, xs, ys)
+    end
+    bounds = map(r -> extrema.(r), ranges)
+
+    return function (x, y)
+        i = _smallest_grid_index(bounds, (x, y))
+        return funcs[i](x, y)
+    end
+end
+
+# Interpolation function for a vector quantity
+# Overwrites `a`
+function _subdomain_interp!(a::AbstractArray, ranges, interp, ::Val{N}) where {N}
+    # Interp function for each subdomain
+    funcs = map(eachslice(a; dims=3), ranges) do slice, (xs, ys)
+        # Each component of the vector
+        fs = eachslice(slice; dims=3) do a_sub
+            itp = extrapolate(interpolate!(a_sub, interp), Flat())
+            scale(itp, xs, ys)
+        end
+        SVector{N}(fs)
+    end
+    bounds = map(r -> extrema.(r), ranges)
+
+    return function (x, y)
+        i = _smallest_grid_index(bounds, (x, y))
+        return map(f -> f(x, y), funcs[i])
+    end
+end
+
+# The smallest index of the grid that might contain position pos
+# Assumes bounds are sorted from smallest to largest
+function _smallest_grid_index(bounds, pos::NTuple{N}) where {N}
+    for (i, b::NTuple{N,NTuple{2}}) in pairs(bounds)
+        if all(c1 < c < c2 for ((c1, c2), c) in zip(b, pos))
+            return i
+        end
+    end
+    return lastindex(bounds)
 end
 
 end # module

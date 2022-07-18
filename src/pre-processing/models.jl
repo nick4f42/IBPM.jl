@@ -78,6 +78,8 @@ struct AdamsBashforth <: ExplicitScheme
     β::Array{Float64, 1}
 end
 
+timestep(ab::AdamsBashforth) = ab.dt
+
 # TODO: Make AdamsBashforth constructor to generate β automatically
 
 """
@@ -166,27 +168,27 @@ Is passed as an arugment into IBProblem, see [`Main.IBPM.IBProblem`](@ref).
 - `xc=0.0`: x coordinate offset for calculating rotational fluxes.
 - `yc=0.0`: y coordinate offset for calculating rotational fluxes.
 """
-struct IBModel{T <: Grid, V <: Body} <: SolnModel
-    grid::T
-    bodies::Array{V, 1}         # Array of bodies
+struct IBModel{G<:Grid, B<:Body} <: SolnModel
+    grid::G
+    bodies::Vector{B}           # Array of bodies
     Re::Float64                 # Reynolds number
     freestream::Function        # Free-stream velocity
     mats::IBMatrices            # Various precomputed sparse matrices
     work::WorkingMemory
     XX::Union{Array{Float64, 2}, Nothing}  #  x-locations for computing rotational fluxes
     YY::Union{Array{Float64, 2}, Nothing}  #  y-locations for computing rotational fluxes
-    function IBModel(grid::T,
-                     bodies::Array{V, 1},
+    function IBModel(grid::G,
+                     bodies::Vector{B},
                      Re::Number;
                      freestream::Function,
                      xc=0.0,
-                     yc=0.0) where {T <: Grid, V <: Body}
+                     yc=0.0) where {G<:Grid, M<:Motion, B<:Body{M}}
         mats = IBMatrices(grid, bodies)
         work = WorkingMemory(grid)
 
         # TODO: Put in different function??
         "Precompute grid locations for cross products (used for rotational flux)"
-        if MotionType(bodies) == MovingGrid
+        if M == MovingGrid
             # Define x-xc, y-yc on all grids
             @assert length(bodies) == 1
             motion = bodies[1].motion
@@ -208,6 +210,9 @@ struct IBModel{T <: Grid, V <: Body} <: SolnModel
         else
             XX, YY = nothing, nothing
         end
-        return new{T, V}(grid, bodies, Float64(Re), freestream, mats, work, XX, YY)
+        return new{G,B}(grid, bodies, Float64(Re), freestream, mats, work, XX, YY)
     end
 end
+
+grid_of(model::IBModel) = model.grid
+motions_of(model::IBModel) = (body.motion for body in model.bodies)
