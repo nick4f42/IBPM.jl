@@ -9,6 +9,7 @@ module Quantities
 
 using Interpolations
 using StaticArrays
+using LinearAlgebra
 
 include("dynamics.jl")
 using .Dynamics2D
@@ -307,7 +308,11 @@ end
 function (q::Velocity)(prob::IBProblem, d::Dense, frame::GridFrame; kw...)
     u = VelocityX()(prob, d, GridFrame(); kw...)
     v = VelocityY()(prob, d, GridFrame(); kw...)
-    return state::IBState -> (x, y) -> SVector(u(state)(x, y), v(state)(x, y))
+    return function(state::IBState)
+        us = u(state)
+        vs = v(state)
+        return (x, y) -> SVector(us(x, y), vs(x, y))
+    end
 end
 
 function (::Velocity)(
@@ -332,6 +337,14 @@ function (::Velocity)(
             ug = u(rg...)
             return rot(ug, -θf(t)) - vf(t) - ωf(t) * rot90((x, y))
         end
+    end
+end
+
+function (q::VelocityNorm)(prob::IBProblem, d::Dense, frame::AbstractFrame; kw...)
+    u = Velocity()(prob, d, GridFrame(); kw...)
+    return function(state::IBState)
+        us = u(state)
+        (x, y) -> norm(us(x, y))
     end
 end
 
